@@ -9,3 +9,13 @@ export function cn(...inputs: ClassValue[]): string {
 export function formatThb(amount: number): string {
   return `฿${Math.round(amount).toLocaleString('th-TH')}`
 }
+
+/** Format an ISO date string as a short Thai (Buddhist-era) date, e.g. 30 พ.ค. 69. */
+export function formatDate(iso: string | null): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: '2-digit',
+  })
+}

@@ -45,8 +45,41 @@ export const PAYMENT_TYPE_LABELS: Record<PaymentType, string> = {
   CASH: 'เงินสด',
 };
 
+export interface ContractDetailPayment {
+  id: string;
+  seq: number;
+  amount: number;
+  dueDate: string;
+  isDownPayment: boolean;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  method: string | null;
+  paidAt: string | null;
+  receiptNumber: string | null;
+}
+
+export interface ContractDetail {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  productName: string;
+  branchName: string;
+  saleName: string;
+  paymentType: PaymentType;
+  status: ContractStatus;
+  totalAmount: number;
+  outstanding: number;
+  installmentCount: number;
+  paidCount: number;
+  createdAt: string;
+  payments: ContractDetailPayment[];
+}
+
 export function fetchContracts(): Promise<ContractListItem[]> {
   return apiFetch<ContractListItem[]>('/contracts');
+}
+
+export function fetchContractDetail(id: string): Promise<ContractDetail> {
+  return apiFetch<ContractDetail>(`/contracts/${id}`);
 }
 
 export function fetchProducts(): Promise<Product[]> {

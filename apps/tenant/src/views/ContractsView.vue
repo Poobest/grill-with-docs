@@ -95,7 +95,12 @@ onMounted(load);
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="c in filtered" :key="c.id">
+          <TableRow
+            v-for="c in filtered"
+            :key="c.id"
+            class="cursor-pointer"
+            @click="router.push(`/contracts/${c.id}`)"
+          >
             <TableCell class="tabular font-semibold text-primary">
               {{ c.id.slice(-8).toUpperCase() }}
             </TableCell>

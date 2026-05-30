@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import DashboardView from '@/views/DashboardView.vue';
 import ContractsView from '@/views/ContractsView.vue';
 import CreateContractView from '@/views/CreateContractView.vue';
+import ContractDetailView from '@/views/ContractDetailView.vue';
 import CollectTodayView from '@/views/CollectTodayView.vue';
 import PlaceholderView from '@/views/PlaceholderView.vue';
 import LoginView from '@/views/LoginView.vue';
@@ -14,6 +15,7 @@ const router = createRouter({
     { path: '/', name: 'dashboard', component: DashboardView },
     { path: '/contracts', name: 'contracts', component: ContractsView },
     { path: '/contracts/new', name: 'contracts-new', component: CreateContractView },
+    { path: '/contracts/:id', name: 'contract-detail', component: ContractDetailView },
     // Placeholder routes keep sidebar nav functional until each slice ships.
     { path: '/customers', component: PlaceholderView, meta: { title: 'ลูกค้า' } },
     { path: '/collect-today', name: 'collect-today', component: CollectTodayView },
