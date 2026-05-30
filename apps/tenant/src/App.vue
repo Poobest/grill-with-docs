@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
 import AppSidebar from '@/components/layout/AppSidebar.vue';
+import ToastHost from '@/components/layout/ToastHost.vue';
 
 const route = useRoute();
 // Public routes (login) render full-screen without the app shell.
@@ -16,4 +17,5 @@ const showShell = computed(() => !route.meta.public);
     </main>
   </div>
   <RouterView v-else />
+  <ToastHost />
 </template>
