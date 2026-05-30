@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Payment, PaymentMethod } from '@prisma/client';
+import { format } from 'date-fns';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CommissionsService,
@@ -48,11 +49,23 @@ export class PaymentsService {
       const now = new Date();
       const contract = payment.contract;
 
+      // Issue a receipt number on approval: REC-YYYYMMDD-00001, sequential per
+      // tenant per day (PRD). Unique per tenant via @@unique([tenantId, receiptNumber]).
+      const datePart = format(now, 'yyyyMMdd');
+      const issuedToday = await tx.payment.count({
+        where: {
+          tenantId: contract.tenantId,
+          receiptNumber: { startsWith: `REC-${datePart}-` },
+        },
+      });
+      const receiptNumber = `REC-${datePart}-${String(issuedToday + 1).padStart(5, '0')}`;
+
       const updated = await tx.payment.update({
         where: { id: payment.id },
         data: {
           status: 'APPROVED',
           method: method ?? payment.method,
+          receiptNumber,
           paidAt: now,
           approvedById,
           approvedAt: now,
@@ -155,4 +168,74 @@ export class PaymentsService {
       return updated;
     });
   }
+
+  /**
+   * Lists pending payments that are due on or before `asOf` (default today) —
+   * the Sale "collect today" worklist. Down payments of pending contracts and
+   * overdue installments of active contracts both surface here.
+   */
+  async listDue(
+    tenantId: string,
+    asOf: Date = new Date(),
+  ): Promise<DuePaymentItem[]> {
+    const endOfDay = new Date(asOf);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        tenantId,
+        status: 'PENDING',
+        dueDate: { lte: endOfDay },
+        contract: {
+          status: { in: ['PENDING_DOWN_PAYMENT', 'ACTIVE', 'DEFAULTED'] },
+        },
+      },
+      orderBy: { dueDate: 'asc' },
+      include: {
+        contract: {
+          select: {
+            id: true,
+            customer: { select: { name: true, phone: true } },
+            product: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const startOfToday = new Date(asOf);
+    startOfToday.setHours(0, 0, 0, 0);
+
+    return payments.map((p) => {
+      const due = new Date(p.dueDate);
+      const overdueDays = Math.max(
+        0,
+        Math.floor(
+          (startOfToday.getTime() - due.setHours(0, 0, 0, 0)) / 86_400_000,
+        ),
+      );
+      return {
+        id: p.id,
+        contractId: p.contract.id,
+        customerName: p.contract.customer.name,
+        customerPhone: p.contract.customer.phone,
+        productName: p.contract.product.name,
+        amount: Number(p.amount),
+        dueDate: p.dueDate.toISOString(),
+        isDownPayment: p.isDownPayment,
+        overdueDays,
+      };
+    });
+  }
+}
+
+export interface DuePaymentItem {
+  id: string;
+  contractId: string;
+  customerName: string;
+  customerPhone: string;
+  productName: string;
+  amount: number;
+  dueDate: string;
+  isDownPayment: boolean;
+  overdueDays: number;
 }

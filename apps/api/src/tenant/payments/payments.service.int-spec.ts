@@ -212,6 +212,34 @@ describe('PaymentsService.approve (integration)', () => {
     expect(paid.method).toBe('CASH');
   });
 
+  it('issues a receipt number (REC-YYYYMMDD-#####) on approval', async () => {
+    const contract = await createDaily();
+    const down = await downPaymentOf(contract.id);
+
+    const approved = await payments.recordCash(down.id, ids.sale);
+    expect(approved.receiptNumber).toMatch(/^REC-\d{8}-\d{5}$/);
+  });
+
+  it('lists pending payments that are due as the collect-today worklist', async () => {
+    // Back-dated DAILY contract → its down payment + early installments are due.
+    const contract = await contracts.create({
+      tenantId: ids.tenant,
+      customerId: ids.customer,
+      productId: ids.product,
+      branchId: ids.branch,
+      saleId: ids.sale,
+      startDate: new Date('2026-01-01T00:00:00.000Z'),
+      paymentType: 'DAILY',
+    });
+
+    const due = await payments.listDue(ids.tenant, new Date('2026-01-10'));
+    expect(due.length).toBeGreaterThan(0);
+    expect(due.every((d) => d.contractId === contract.id)).toBe(true);
+    // earliest due first, with overdue days computed
+    expect(due[0].isDownPayment).toBe(true);
+    expect(due[0].customerName).toBe('ลูกค้า');
+  });
+
   it('rejects approving an already-approved payment', async () => {
     const contract = await createDaily();
     const down = await downPaymentOf(contract.id);

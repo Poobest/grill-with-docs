@@ -210,6 +210,7 @@ model Payment {
   status        PaymentStatus  @default(PENDING)
   method        PaymentMethod?
   slipImageUrl  String?
+  receiptNumber String?
   paidAt        DateTime?
   approvedById  String?
   approvedAt    DateTime?
@@ -221,6 +222,8 @@ model Payment {
   approvedBy  User?        @relation("ApprovedBy", fields: [approvedById], references: [id])
   commissions Commission[]
   lateFees    LateFee[]
+
+  @@unique([tenantId, receiptNumber])
 }
 
 model Commission {
