@@ -7,9 +7,20 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { ContractsModule } from './tenant/contracts/contracts.module';
 import { PaymentsModule } from './tenant/payments/payments.module';
+import { ProductsModule } from './tenant/products/products.module';
+import { CustomersModule } from './tenant/customers/customers.module';
+import { DashboardModule } from './tenant/dashboard/dashboard.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, ContractsModule, PaymentsModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    ContractsModule,
+    PaymentsModule,
+    ProductsModule,
+    CustomersModule,
+    DashboardModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,
