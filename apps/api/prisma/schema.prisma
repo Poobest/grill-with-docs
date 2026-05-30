@@ -6,14 +6,24 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─── Platform Layer ───────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Platform layer
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PlatformAdmin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
 model SubscriptionPlan {
   id            String   @id @default(cuid())
-  name          String
+  name          String   @unique
   maxBranches   Int
   maxUsers      Int
-  pricePerMonth Decimal  @db.Decimal(10, 2)
+  pricePerMonth Decimal  @db.Decimal(12, 2)
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -32,70 +42,63 @@ model Tenant {
   updatedAt             DateTime  @updatedAt
 
   plan        SubscriptionPlan @relation(fields: [planId], references: [id])
-  users       User[]
   branches    Branch[]
+  users       User[]
   products    Product[]
   customers   Customer[]
   contracts   Contract[]
   payments    Payment[]
   commissions Commission[]
   lateFees    LateFee[]
+  stock       BranchStock[]
 }
 
-model PlatformAdmin {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-}
-
-// ─── Tenant Layer ─────────────────────────────────────────────────────────────
-
-enum UserRole {
-  TENANT_ADMIN
-  SALE_LEAD
-  SALE
-}
-
-model User {
-  id                        String   @id @default(cuid())
-  tenantId                  String
-  branchId                  String?
-  role                      UserRole
-  name                      String
-  email                     String
-  password                  String
-  commissionRateCash        Decimal  @default(0) @db.Decimal(5, 2)
-  commissionRateInstallment Decimal  @default(0) @db.Decimal(5, 2)
-  isActive                  Boolean  @default(true)
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
-
-  tenant           Tenant       @relation(fields: [tenantId], references: [id])
-  branch           Branch?      @relation(fields: [branchId], references: [id])
-  createdContracts Contract[]   @relation("ContractSale")
-  approvedPayments Payment[]    @relation("PaymentApprover")
-  commissions      Commission[]
-
-  @@unique([tenantId, email])
-  @@index([tenantId])
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Tenant layer
+// ─────────────────────────────────────────────────────────────────────────────
 
 model Branch {
   id        String   @id @default(cuid())
   tenantId  String
   name      String
   address   String?
-  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   tenant    Tenant        @relation(fields: [tenantId], references: [id])
   users     User[]
-  stocks    BranchStock[]
+  stock     BranchStock[]
   contracts Contract[]
+}
 
-  @@index([tenantId])
+enum UserRole {
+  ADMIN
+  SALE_LEAD
+  SALE
+}
+
+model User {
+  id              String   @id @default(cuid())
+  tenantId        String
+  branchId        String?
+  name            String
+  email           String
+  password        String
+  role            UserRole
+  installmentRate Decimal  @default(0) @db.Decimal(5, 4)
+  cashRate        Decimal  @default(0) @db.Decimal(5, 4)
+  overrideRate    Decimal  @default(0) @db.Decimal(5, 4)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant           Tenant       @relation(fields: [tenantId], references: [id])
+  branch           Branch?      @relation(fields: [branchId], references: [id])
+  contracts        Contract[]
+  approvedPayments Payment[]    @relation("ApprovedBy")
+  commissions      Commission[]
+
+  @@unique([tenantId, email])
 }
 
 model Product {
@@ -103,35 +106,32 @@ model Product {
   tenantId     String
   name         String
   description  String?
-  cashPrice    Decimal  @db.Decimal(10, 2)
-  downPayment  Decimal  @db.Decimal(10, 2)
-  dailyPrice   Decimal  @db.Decimal(10, 2)
-  weeklyPrice  Decimal  @db.Decimal(10, 2)
-  monthlyPrice Decimal  @db.Decimal(10, 2)
+  cashPrice    Decimal  @db.Decimal(12, 2)
+  downPayment  Decimal  @db.Decimal(12, 2)
+  dailyPrice   Decimal  @db.Decimal(12, 2)
+  weeklyPrice  Decimal  @db.Decimal(12, 2)
+  monthlyPrice Decimal  @db.Decimal(12, 2)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   tenant    Tenant        @relation(fields: [tenantId], references: [id])
-  stocks    BranchStock[]
+  stock     BranchStock[]
   contracts Contract[]
-
-  @@index([tenantId])
 }
 
 model BranchStock {
-  id        String   @id @default(cuid())
   tenantId  String
   branchId  String
   productId String
   quantity  Int      @default(0)
   updatedAt DateTime @updatedAt
 
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
   branch  Branch  @relation(fields: [branchId], references: [id])
   product Product @relation(fields: [productId], references: [id])
 
-  @@unique([branchId, productId])
-  @@index([tenantId])
+  @@id([branchId, productId])
 }
 
 model Customer {
@@ -139,17 +139,14 @@ model Customer {
   tenantId      String
   name          String
   phone         String
-  lineUserId    String?  @unique
+  lineUserId    String?
   contractLimit Int      @default(1)
   isSuspended   Boolean  @default(false)
-  claimCode     String?  @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   tenant    Tenant     @relation(fields: [tenantId], references: [id])
   contracts Contract[]
-
-  @@index([tenantId])
 }
 
 enum PaymentType {
@@ -160,11 +157,11 @@ enum PaymentType {
 }
 
 enum ContractStatus {
-  PENDING
+  PENDING_DOWN_PAYMENT
   ACTIVE
   COMPLETED
-  DEFAULTED
   CANCELLED
+  DEFAULTED
 }
 
 model Contract {
@@ -175,11 +172,11 @@ model Contract {
   branchId         String
   saleId           String
   paymentType      PaymentType
-  status           ContractStatus @default(PENDING)
-  totalAmount      Decimal        @db.Decimal(10, 2)
+  totalAmount      Decimal        @db.Decimal(12, 2)
+  installmentCount Int
+  status           ContractStatus @default(PENDING_DOWN_PAYMENT)
   downPaymentPaid  Boolean        @default(false)
   warrantyActive   Boolean        @default(false)
-  installmentCount Int
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -187,20 +184,15 @@ model Contract {
   customer Customer  @relation(fields: [customerId], references: [id])
   product  Product   @relation(fields: [productId], references: [id])
   branch   Branch    @relation(fields: [branchId], references: [id])
-  sale     User      @relation("ContractSale", fields: [saleId], references: [id])
+  sale     User      @relation(fields: [saleId], references: [id])
   payments Payment[]
   lateFees LateFee[]
-
-  @@index([tenantId])
-  @@index([customerId])
-  @@index([saleId])
 }
 
 enum PaymentStatus {
   PENDING
   APPROVED
   REJECTED
-  OVERDUE
 }
 
 enum PaymentMethod {
@@ -212,13 +204,13 @@ model Payment {
   id            String         @id @default(cuid())
   tenantId      String
   contractId    String
-  amount        Decimal        @db.Decimal(10, 2)
+  amount        Decimal        @db.Decimal(12, 2)
   dueDate       DateTime
-  paidAt        DateTime?
+  isDownPayment Boolean        @default(false)
   status        PaymentStatus  @default(PENDING)
   method        PaymentMethod?
   slipImageUrl  String?
-  isDownPayment Boolean        @default(false)
+  paidAt        DateTime?
   approvedById  String?
   approvedAt    DateTime?
   createdAt     DateTime       @default(now())
@@ -226,46 +218,34 @@ model Payment {
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id])
   contract    Contract     @relation(fields: [contractId], references: [id])
-  approvedBy  User?        @relation("PaymentApprover", fields: [approvedById], references: [id])
+  approvedBy  User?        @relation("ApprovedBy", fields: [approvedById], references: [id])
   commissions Commission[]
-
-  @@index([tenantId])
-  @@index([contractId])
-  @@index([dueDate, status])
-}
-
-enum CommissionType {
-  SALE_COMMISSION
-  OVERRIDE_COMMISSION
+  lateFees    LateFee[]
 }
 
 model Commission {
-  id        String         @id @default(cuid())
+  id        String   @id @default(cuid())
   tenantId  String
   paymentId String
   userId    String
-  amount    Decimal        @db.Decimal(10, 2)
-  type      CommissionType
-  createdAt DateTime       @default(now())
+  amount    Decimal  @db.Decimal(12, 2)
+  type      String
+  createdAt DateTime @default(now())
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id])
   payment Payment @relation(fields: [paymentId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
-
-  @@index([tenantId])
-  @@index([userId])
 }
 
 model LateFee {
   id         String   @id @default(cuid())
   tenantId   String
   contractId String
-  amount     Decimal  @db.Decimal(10, 2)
-  issuedAt   DateTime @default(now())
+  paymentId  String
+  amount     Decimal  @db.Decimal(12, 2)
+  createdAt  DateTime @default(now())
 
   tenant   Tenant   @relation(fields: [tenantId], references: [id])
   contract Contract @relation(fields: [contractId], references: [id])
-
-  @@index([tenantId])
-  @@index([contractId])
+  payment  Payment  @relation(fields: [paymentId], references: [id])
 }

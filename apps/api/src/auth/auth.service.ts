@@ -1,30 +1,46 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { PrismaService } from '../prisma/prisma.service';
+import type { JwtPayload } from './jwt.strategy';
+
+export interface LoginResult {
+  accessToken: string;
+  user: {
+    id: string;
+    name: string;
+    role: string;
+    tenantId: string;
+    branchId: string | null;
+  };
+}
 
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
-    private jwt: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
   ) {}
 
-  async loginTenant(email: string, password: string) {
+  /**
+   * Authenticates a tenant user by email + password and issues a tenant JWT.
+   *
+   * v1 note: email is unique per tenant, not globally. With a single onboarded
+   * tenant this is unambiguous; multi-tenant login disambiguation (tenant slug)
+   * is tracked as a follow-up.
+   */
+  async login(email: string, password: string): Promise<LoginResult> {
     const user = await this.prisma.user.findFirst({
       where: { email, isActive: true },
-      include: { tenant: { select: { isActive: true } } },
     });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      throw new UnauthorizedException('Invalid credentials');
+    const passwordOk =
+      user !== null && (await bcrypt.compare(password, user.password));
+    if (!user || !passwordOk) {
+      throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     }
 
-    const payload = {
+    const payload: JwtPayload = {
       sub: user.id,
       tenantId: user.tenantId,
       role: user.role,
@@ -32,48 +48,14 @@ export class AuthService {
     };
 
     return {
-      accessToken: this.jwt.sign(payload),
+      accessToken: await this.jwt.signAsync(payload),
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
         role: user.role,
+        tenantId: user.tenantId,
+        branchId: user.branchId,
       },
     };
-  }
-
-  async loginPlatform(email: string, password: string) {
-    const admin = await this.prisma.platformAdmin.findUnique({
-      where: { email },
-    });
-
-    if (!admin || !(await bcrypt.compare(password, admin.password))) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const payload = { sub: admin.id, role: 'PLATFORM_ADMIN' };
-    return {
-      accessToken: this.jwt.sign(payload, {
-        secret: process.env.JWT_PLATFORM_SECRET,
-      }),
-      admin: { id: admin.id, email: admin.email },
-    };
-  }
-
-  async setupPlatformAdmin(email: string, password: string) {
-    const exists = await this.prisma.platformAdmin.count();
-    if (exists > 0) {
-      throw new ConflictException('Platform admin already exists');
-    }
-    const hashed = await this.hashPassword(password);
-    const admin = await this.prisma.platformAdmin.create({
-      data: { email, password: hashed },
-      select: { id: true, email: true, createdAt: true },
-    });
-    return admin;
-  }
-
-  async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 10);
   }
 }
