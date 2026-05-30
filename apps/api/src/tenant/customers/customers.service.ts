@@ -1,115 +1,110 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  ClaimCustomerDto,
-  CreateCustomerDto,
-  SetContractLimitDto,
-  UpdateCustomerDto,
-} from './dto/customer.dto';
-import { randomBytes } from 'crypto';
+
+export interface CustomerListItem {
+  id: string;
+  name: string;
+  phone: string;
+  isSuspended: boolean;
+  contractLimit: number;
+}
+
+export interface ContractEligibilityInput {
+  isSuspended: boolean;
+  /** Number of contracts the customer currently has in an active/open state. */
+  activeContractCount: number;
+  contractLimit: number;
+}
+
+export type EligibilityReason = 'SUSPENDED' | 'LIMIT_REACHED';
+
+export interface EligibilityResult {
+  allowed: boolean;
+  reason?: EligibilityReason;
+}
 
 @Injectable()
 export class CustomersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(tenantId: string, search?: string) {
-    return this.prisma.customer.findMany({
-      where: {
+  private toItem(c: {
+    id: string;
+    name: string;
+    phone: string;
+    isSuspended: boolean;
+    contractLimit: number;
+  }): CustomerListItem {
+    return {
+      id: c.id,
+      name: c.name,
+      phone: c.phone,
+      isSuspended: c.isSuspended,
+      contractLimit: c.contractLimit,
+    };
+  }
+
+  /** Creates a customer for a tenant. */
+  async create(
+    tenantId: string,
+    data: { name: string; phone: string; contractLimit?: number },
+  ): Promise<CustomerListItem> {
+    const customer = await this.prisma.customer.create({
+      data: {
         tenantId,
-        ...(search && {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { phone: { contains: search } },
-          ],
-        }),
-      },
-      include: {
-        _count: { select: { contracts: { where: { status: { in: ['PENDING', 'ACTIVE'] } } } } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async findOne(tenantId: string, id: string) {
-    const customer = await this.prisma.customer.findFirst({
-      where: { id, tenantId },
-      include: {
-        contracts: {
-          orderBy: { createdAt: 'desc' },
-          include: { product: { select: { name: true } } },
-        },
+        name: data.name,
+        phone: data.phone,
+        contractLimit: data.contractLimit ?? 1,
       },
     });
-    if (!customer) throw new NotFoundException('Customer not found');
-    return customer;
+    return this.toItem(customer);
   }
 
-  async create(tenantId: string, dto: CreateCustomerDto) {
-    const claimCode = randomBytes(4).toString('hex').toUpperCase();
-    return this.prisma.customer.create({
-      data: { ...dto, tenantId, claimCode },
-    });
-  }
-
-  async update(tenantId: string, id: string, dto: UpdateCustomerDto) {
-    await this.findOne(tenantId, id);
-    return this.prisma.customer.update({ where: { id }, data: dto });
-  }
-
-  async setContractLimit(tenantId: string, id: string, dto: SetContractLimitDto) {
-    await this.findOne(tenantId, id);
-    return this.prisma.customer.update({
-      where: { id },
-      data: { contractLimit: dto.contractLimit },
-    });
-  }
-
-  // LINE LIFF: ลูกค้า claim account ด้วย claimCode
-  async claim(dto: ClaimCustomerDto) {
-    const customer = await this.prisma.customer.findUnique({
-      where: { claimCode: dto.claimCode },
-    });
-
-    if (!customer) throw new NotFoundException('Invalid claim code');
-    if (customer.lineUserId) throw new BadRequestException('Account already claimed');
-
-    return this.prisma.customer.update({
-      where: { id: customer.id },
-      data: { lineUserId: dto.lineUserId, claimCode: null },
-      select: { id: true, name: true, tenantId: true },
-    });
-  }
-
-  async suspend(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
-    return this.prisma.customer.update({ where: { id }, data: { isSuspended: true } });
-  }
-
-  async unsuspend(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
-    return this.prisma.customer.update({ where: { id }, data: { isSuspended: false } });
-  }
-
-  async validateCanContract(tenantId: string, customerId: string) {
-    const customer = await this.prisma.customer.findFirst({
+  /** Suspends or un-suspends a customer (scoped to the tenant). */
+  async setSuspended(
+    tenantId: string,
+    customerId: string,
+    isSuspended: boolean,
+  ): Promise<CustomerListItem> {
+    const existing = await this.prisma.customer.findFirst({
       where: { id: customerId, tenantId },
     });
-    if (!customer) throw new NotFoundException('Customer not found');
-    if (customer.isSuspended) {
-      throw new BadRequestException('Customer account is suspended due to overdue payments');
-    }
-
-    const activeCount = await this.prisma.contract.count({
-      where: { customerId, tenantId, status: { in: ['PENDING', 'ACTIVE'] } },
+    if (!existing) throw new NotFoundException('ไม่พบลูกค้า');
+    const customer = await this.prisma.customer.update({
+      where: { id: customerId },
+      data: { isSuspended },
     });
-    if (activeCount >= customer.contractLimit) {
-      throw new BadRequestException(
-        `Customer has reached the contract limit of ${customer.contractLimit}`,
-      );
+    return this.toItem(customer);
+  }
+
+  /** Lists a tenant's customers for selection in the create-contract flow. */
+  async list(tenantId: string): Promise<CustomerListItem[]> {
+    const customers = await this.prisma.customer.findMany({
+      where: { tenantId },
+      orderBy: { name: 'asc' },
+    });
+    return customers.map((c) => ({
+      id: c.id,
+      name: c.name,
+      phone: c.phone,
+      isSuspended: c.isSuspended,
+      contractLimit: c.contractLimit,
+    }));
+  }
+
+  /**
+   * Decides whether a customer may take on a new contract. Pure decision —
+   * the caller supplies the current active-contract count from the database.
+   *
+   * Rules (PRD): a suspended customer is blocked; a customer at or over their
+   * contract limit is blocked; otherwise allowed.
+   */
+  static canCreateContract(input: ContractEligibilityInput): EligibilityResult {
+    if (input.isSuspended) {
+      return { allowed: false, reason: 'SUSPENDED' };
     }
+    if (input.activeContractCount >= input.contractLimit) {
+      return { allowed: false, reason: 'LIMIT_REACHED' };
+    }
+    return { allowed: true };
   }
 }

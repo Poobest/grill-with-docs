@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { useAuthStore } from './stores/auth'
-import AppNav from './components/AppNav.vue'
+import { computed } from 'vue';
+import { RouterView, useRoute } from 'vue-router';
+import AppSidebar from '@/components/layout/AppSidebar.vue';
+import ToastHost from '@/components/layout/ToastHost.vue';
 
-const auth = useAuthStore()
+const route = useRoute();
+// Public routes (login) render full-screen without the app shell.
+const showShell = computed(() => !route.meta.public);
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <AppNav v-if="auth.isLoggedIn" />
-    <main class="max-w-7xl mx-auto px-4 py-6">
+  <div v-if="showShell" class="flex min-h-screen bg-background">
+    <AppSidebar />
+    <main class="flex-1 overflow-x-hidden">
       <RouterView />
     </main>
   </div>
+  <RouterView v-else />
+  <ToastHost />
 </template>

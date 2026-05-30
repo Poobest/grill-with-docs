@@ -1,38 +1,53 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
-import { CurrentTenant } from '../../common/decorators/tenant.decorator';
-import { Roles } from '../../common/guards/roles.guard';
-import { AdjustStockDto, UpdateStockDto } from './dto/stock.dto';
+import { Body, Controller, Get, Post } from '@nestjs/common';
+import { IsInt, IsString, Min } from 'class-validator';
+import { TenantId } from '../../common/decorators/current-user.decorator';
+import { PrismaService } from '../../prisma/prisma.service';
 import { StockService } from './stock.service';
 
-@Controller('branches/:branchId/stock')
-@UseGuards(AuthGuard('jwt'))
+export class SetStockDto {
+  @IsString()
+  branchId!: string;
+
+  @IsString()
+  productId!: string;
+
+  @IsInt()
+  @Min(0)
+  quantity!: number;
+}
+
+@Controller('stock')
 export class StockController {
-  constructor(private service: StockService) {}
+  constructor(
+    private readonly stock: StockService,
+    private readonly prisma: PrismaService,
+  ) {}
 
+  /** Current stock levels across the tenant's branches. */
   @Get()
-  findByBranch(@CurrentTenant() tenantId: string, @Param('branchId') branchId: string) {
-    return this.service.findByBranch(tenantId, branchId);
+  async list(@TenantId() tenantId: string) {
+    const rows = await this.prisma.branchStock.findMany({
+      where: { tenantId },
+      include: {
+        branch: { select: { name: true } },
+        product: { select: { name: true } },
+      },
+      orderBy: { product: { name: 'asc' } },
+    });
+    return rows.map((r) => ({
+      branchId: r.branchId,
+      productId: r.productId,
+      branchName: r.branch.name,
+      productName: r.product.name,
+      quantity: r.quantity,
+    }));
   }
 
-  @Post('set')
-  @Roles(UserRole.TENANT_ADMIN, UserRole.SALE_LEAD)
-  setStock(
-    @CurrentTenant() tenantId: string,
-    @Param('branchId') branchId: string,
-    @Body() dto: UpdateStockDto & { productId: string },
-  ) {
-    return this.service.setStock(tenantId, branchId, dto);
-  }
-
-  @Patch('adjust')
-  @Roles(UserRole.TENANT_ADMIN, UserRole.SALE_LEAD)
-  adjustStock(
-    @CurrentTenant() tenantId: string,
-    @Param('branchId') branchId: string,
-    @Body() dto: AdjustStockDto,
-  ) {
-    return this.service.adjustStock(tenantId, branchId, dto);
+  @Post()
+  set(@TenantId() tenantId: string, @Body() dto: SetStockDto) {
+    return this.stock.set(
+      { tenantId, branchId: dto.branchId, productId: dto.productId },
+      dto.quantity,
+    );
   }
 }

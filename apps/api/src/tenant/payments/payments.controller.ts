@@ -1,70 +1,30 @@
+import { Controller, Get, Param, Post } from '@nestjs/common';
 import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { PaymentStatus, UserRole } from '@prisma/client';
-import { CurrentTenant, CurrentUser } from '../../common/decorators/tenant.decorator';
-import { Roles } from '../../common/guards/roles.guard';
-import { RecordCashDto, SubmitSlipDto } from './dto/payment.dto';
+  CurrentUser,
+  TenantId,
+  type AuthUser,
+} from '../../common/decorators/current-user.decorator';
 import { PaymentsService } from './payments.service';
 
 @Controller('payments')
-@UseGuards(AuthGuard('jwt'))
 export class PaymentsController {
-  constructor(private service: PaymentsService) {}
+  constructor(private readonly payments: PaymentsService) {}
 
-  @Get()
-  findAll(
-    @CurrentTenant() tenantId: string,
-    @Query('contractId') contractId?: string,
-    @Query('status') status?: PaymentStatus,
-  ) {
-    return this.service.findAll(tenantId, { contractId, status });
+  /** Pending payments due today or earlier — the Sale collect-today worklist. */
+  @Get('collect-today')
+  collectToday(@TenantId() tenantId: string) {
+    return this.payments.listDue(tenantId);
   }
 
-  @Get(':id')
-  findOne(@CurrentTenant() tenantId: string, @Param('id') id: string) {
-    return this.service.findOne(tenantId, id);
+  /** Records a cash collection at the branch and approves it. */
+  @Post(':id/cash')
+  recordCash(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.payments.recordCash(id, user.userId);
   }
 
-  @Post('cash')
-  @Roles(UserRole.SALE, UserRole.SALE_LEAD, UserRole.TENANT_ADMIN)
-  recordCash(
-    @CurrentTenant() tenantId: string,
-    @CurrentUser() user: { id: string },
-    @Body() dto: RecordCashDto,
-  ) {
-    return this.service.recordCash(tenantId, user.id, dto);
-  }
-
-  @Post('slip')
-  submitSlip(
-    @CurrentTenant() tenantId: string,
-    @Body() dto: SubmitSlipDto,
-  ) {
-    return this.service.submitSlip(tenantId, dto);
-  }
-
-  @Patch(':id/approve')
-  @Roles(UserRole.SALE, UserRole.SALE_LEAD, UserRole.TENANT_ADMIN)
-  approve(
-    @CurrentTenant() tenantId: string,
-    @CurrentUser() user: { id: string },
-    @Param('id') id: string,
-  ) {
-    return this.service.approve(tenantId, user.id, id);
-  }
-
-  @Patch(':id/reject')
-  @Roles(UserRole.SALE, UserRole.SALE_LEAD, UserRole.TENANT_ADMIN)
-  reject(@CurrentTenant() tenantId: string, @Param('id') id: string) {
-    return this.service.reject(tenantId, id);
+  /** Approves a submitted transfer slip. */
+  @Post(':id/approve')
+  approve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.payments.approve(id, user.userId);
   }
 }

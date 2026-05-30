@@ -1,85 +1,88 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import type { BranchStock } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AdjustStockDto, UpdateStockDto } from './dto/stock.dto';
+
+export interface StockKey {
+  tenantId: string;
+  branchId: string;
+  productId: string;
+}
 
 @Injectable()
 export class StockService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async findByBranch(tenantId: string, branchId: string) {
-    await this.validateBranch(tenantId, branchId);
-    return this.prisma.branchStock.findMany({
-      where: { tenantId, branchId },
-      include: { product: { select: { id: true, name: true, isActive: true } } },
-      orderBy: { product: { name: 'asc' } },
-    });
-  }
-
-  async setStock(tenantId: string, branchId: string, dto: UpdateStockDto & { productId: string }) {
-    await this.validateBranch(tenantId, branchId);
-    return this.prisma.branchStock.upsert({
-      where: { branchId_productId: { branchId, productId: dto.productId } },
-      update: { quantity: dto.quantity, tenantId },
-      create: { branchId, productId: dto.productId, quantity: dto.quantity, tenantId },
-    });
-  }
-
-  async adjustStock(tenantId: string, branchId: string, dto: AdjustStockDto) {
-    await this.validateBranch(tenantId, branchId);
-    const current = await this.prisma.branchStock.findUnique({
-      where: { branchId_productId: { branchId, productId: dto.productId } },
-    });
-
-    const newQty = (current?.quantity ?? 0) + dto.quantity;
-    if (newQty < 0) {
-      throw new BadRequestException('Stock cannot go below 0');
+  /** Sets the absolute stock quantity for a product at a branch. */
+  async set(key: StockKey, quantity: number): Promise<BranchStock> {
+    if (quantity < 0) {
+      throw new BadRequestException('จำนวนสต็อกต้องไม่ติดลบ');
     }
-
     return this.prisma.branchStock.upsert({
-      where: { branchId_productId: { branchId, productId: dto.productId } },
-      update: { quantity: newQty },
-      create: { branchId, productId: dto.productId, quantity: newQty, tenantId },
+      where: {
+        branchId_productId: {
+          branchId: key.branchId,
+          productId: key.productId,
+        },
+      },
+      create: {
+        tenantId: key.tenantId,
+        branchId: key.branchId,
+        productId: key.productId,
+        quantity,
+      },
+      update: { quantity },
     });
   }
 
-  // เรียกใช้เมื่อ approve เงินดาวน์ — ใช้ transaction เพื่อป้องกัน race condition
-  async decrementOnDownPayment(
-    tenantId: string,
-    branchId: string,
-    productId: string,
-    tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
-  ) {
-    const stock = await tx.branchStock.findUnique({
-      where: { branchId_productId: { branchId, productId } },
-    });
-
-    if (!stock || stock.quantity < 1) {
-      throw new BadRequestException('Product out of stock');
+  /** Applies a relative delta (positive or negative) to stock, never below 0. */
+  async adjust(key: StockKey, delta: number): Promise<BranchStock> {
+    const current = await this.requireRow(key);
+    const next = current.quantity + delta;
+    if (next < 0) {
+      throw new BadRequestException('สต็อกไม่เพียงพอ');
     }
-
-    return tx.branchStock.update({
-      where: { branchId_productId: { branchId, productId } },
-      data: { quantity: stock.quantity - 1 },
-    });
+    return this.write(key, next);
   }
 
-  // เรียกใช้เมื่อ Admin cancel contract
-  async incrementOnCancellation(
-    tenantId: string,
-    branchId: string,
-    productId: string,
-    tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
-  ) {
-    return tx.branchStock.update({
-      where: { branchId_productId: { branchId, productId } },
-      data: { quantity: { increment: 1 } },
-    });
+  /** Decrements stock by one when a down payment is approved (goods leave the store). */
+  async decrementOnDownPayment(key: StockKey): Promise<BranchStock> {
+    const current = await this.requireRow(key);
+    if (current.quantity < 1) {
+      throw new BadRequestException('สินค้าหมดสต็อกที่สาขานี้');
+    }
+    return this.write(key, current.quantity - 1);
   }
 
-  private async validateBranch(tenantId: string, branchId: string) {
-    const branch = await this.prisma.branch.findFirst({
-      where: { id: branchId, tenantId, isActive: true },
+  /** Returns one unit to stock when a contract is cancelled. */
+  async incrementOnCancel(key: StockKey): Promise<BranchStock> {
+    const current = await this.requireRow(key);
+    return this.write(key, current.quantity + 1);
+  }
+
+  private async requireRow(key: StockKey): Promise<BranchStock> {
+    const row = await this.prisma.branchStock.findUnique({
+      where: {
+        branchId_productId: {
+          branchId: key.branchId,
+          productId: key.productId,
+        },
+      },
     });
-    if (!branch) throw new NotFoundException('Branch not found');
+    if (!row) {
+      throw new BadRequestException('ไม่พบสต็อกสินค้าสำหรับสาขานี้');
+    }
+    return row;
+  }
+
+  private write(key: StockKey, quantity: number): Promise<BranchStock> {
+    return this.prisma.branchStock.update({
+      where: {
+        branchId_productId: {
+          branchId: key.branchId,
+          productId: key.productId,
+        },
+      },
+      data: { quantity },
+    });
   }
 }

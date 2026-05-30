@@ -1,77 +1,30 @@
-import { Injectable } from '@nestjs/common';
-import { CommissionType, PaymentType, UserRole } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+export type CommissionPaymentType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CASH';
 
-type PrismaTx = Parameters<Parameters<PrismaService['$transaction']>[0]>[0];
+export interface CommissionRates {
+  /** Rate applied to installment (DAILY/WEEKLY/MONTHLY) collections. */
+  installmentRate: number;
+  /** Rate applied to CASH collections. */
+  cashRate: number;
+}
 
-@Injectable()
 export class CommissionsService {
-  constructor(private prisma: PrismaService) {}
-
-  async calculateAndInsert(
-    tx: PrismaTx,
-    tenantId: string,
-    paymentId: string,
-    amount: unknown,
-    paymentType: PaymentType,
-    saleId: string,
-    branchId: string,
-  ) {
-    const sale = await tx.user.findUnique({ where: { id: saleId } });
-    if (!sale) return;
-
-    const rate =
-      paymentType === PaymentType.CASH
-        ? sale.commissionRateCash
-        : sale.commissionRateInstallment;
-
-    await tx.commission.create({
-      data: {
-        tenantId,
-        paymentId,
-        userId: saleId,
-        amount: (Number(amount) * Number(rate)) / 100,
-        type: CommissionType.SALE_COMMISSION,
-      },
-    });
-
-    const saleLead = await tx.user.findFirst({
-      where: { tenantId, branchId, role: UserRole.SALE_LEAD, isActive: true },
-    });
-
-    if (saleLead) {
-      const overrideRate =
-        paymentType === PaymentType.CASH
-          ? saleLead.commissionRateCash
-          : saleLead.commissionRateInstallment;
-
-      await tx.commission.create({
-        data: {
-          tenantId,
-          paymentId,
-          userId: saleLead.id,
-          amount: (Number(amount) * Number(overrideRate)) / 100,
-          type: CommissionType.OVERRIDE_COMMISSION,
-        },
-      });
-    }
+  /**
+   * Selects the applicable rate for a collected payment. CASH uses `cashRate`,
+   * every installment type uses `installmentRate` (ADR-0002).
+   */
+  static rateFor(
+    paymentType: CommissionPaymentType,
+    rates: CommissionRates,
+  ): number {
+    return paymentType === 'CASH' ? rates.cashRate : rates.installmentRate;
   }
 
-  async findAll(tenantId: string, filters: { userId?: string }) {
-    return this.prisma.commission.findMany({
-      where: { tenantId, ...filters },
-      include: {
-        user: { select: { id: true, name: true, role: true } },
-        payment: {
-          select: {
-            id: true,
-            amount: true,
-            paidAt: true,
-            contract: { select: { id: true, paymentType: true } },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  /**
+   * Commission earned on a single approved payment = collected amount × rate,
+   * rounded to 2 decimal places (THB). Commission is computed on real
+   * collections, never on contract value (ADR-0002).
+   */
+  static commissionAmount(collectedAmount: number, rate: number): number {
+    return Math.round(collectedAmount * rate * 100) / 100;
   }
 }

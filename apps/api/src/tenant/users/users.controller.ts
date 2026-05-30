@@ -1,53 +1,68 @@
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { UserRole } from '@prisma/client';
-import { CurrentTenant } from '../../common/decorators/tenant.decorator';
-import { Roles } from '../../common/guards/roles.guard';
-import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+  IsEmail,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  MinLength,
+} from 'class-validator';
+import { TenantId } from '../../common/decorators/current-user.decorator';
 import { UsersService } from './users.service';
 
+const ROLES = ['ADMIN', 'SALE_LEAD', 'SALE'] as const;
+
+export class CreateUserDto {
+  @IsString()
+  @MinLength(1)
+  name!: string;
+
+  @IsEmail()
+  email!: string;
+
+  @IsString()
+  @MinLength(6)
+  password!: string;
+
+  @IsIn(ROLES)
+  role!: (typeof ROLES)[number];
+
+  @IsOptional()
+  @IsString()
+  branchId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  installmentRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  cashRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  overrideRate?: number;
+}
+
 @Controller('users')
-@UseGuards(AuthGuard('jwt'))
-@Roles(UserRole.TENANT_ADMIN)
 export class UsersController {
-  constructor(private service: UsersService) {}
+  constructor(private readonly users: UsersService) {}
 
   @Get()
-  findAll(@CurrentTenant() tenantId: string, @Query('role') role?: UserRole) {
-    return this.service.findAll(tenantId, role);
-  }
-
-  @Get(':id')
-  findOne(@CurrentTenant() tenantId: string, @Param('id') id: string) {
-    return this.service.findOne(tenantId, id);
+  list(@TenantId() tenantId: string) {
+    return this.users.list(tenantId);
   }
 
   @Post()
-  create(@CurrentTenant() tenantId: string, @Body() dto: CreateUserDto) {
-    return this.service.create(tenantId, dto);
-  }
-
-  @Patch(':id')
-  update(
-    @CurrentTenant() tenantId: string,
-    @Param('id') id: string,
-    @Body() dto: UpdateUserDto,
-  ) {
-    return this.service.update(tenantId, id, dto);
-  }
-
-  @Delete(':id')
-  deactivate(@CurrentTenant() tenantId: string, @Param('id') id: string) {
-    return this.service.deactivate(tenantId, id);
+  create(@TenantId() tenantId: string, @Body() dto: CreateUserDto) {
+    return this.users.create(tenantId, dto);
   }
 }

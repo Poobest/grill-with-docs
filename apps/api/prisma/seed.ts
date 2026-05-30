@@ -1,409 +1,489 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
+import { subDays } from 'date-fns';
+import {
+  ContractsService,
+  type ScheduleType,
+} from '../src/tenant/contracts/contracts.service';
 
 const prisma = new PrismaClient({
-  datasourceUrl: process.env.DATABASE_URL,
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });
 
+const DEMO_PASSWORD = 'password123';
+const SALE_INSTALLMENT_RATE = 0.05;
+const SALE_CASH_RATE = 0.02;
+const LEAD_OVERRIDE_RATE = 0.01;
+
+async function clean() {
+  await prisma.commission.deleteMany();
+  await prisma.lateFee.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.contract.deleteMany();
+  await prisma.branchStock.deleteMany();
+  await prisma.customer.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.branch.deleteMany();
+  await prisma.tenant.deleteMany();
+  await prisma.subscriptionPlan.deleteMany();
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
 async function main() {
-  console.log('🌱 Seeding database...');
+  await clean();
+  const password = await bcrypt.hash(DEMO_PASSWORD, 10);
 
-  // ── Platform Admin ──────────────────────────────────────────────────────────
-  const platformAdmin = await prisma.platformAdmin.upsert({
-    where: { email: 'admin@platform.com' },
-    update: {},
-    create: {
-      email: 'admin@platform.com',
-      password: await bcrypt.hash('password123', 10),
+  const plan = await prisma.subscriptionPlan.create({
+    data: {
+      name: 'Standard',
+      maxBranches: 5,
+      maxUsers: 20,
+      pricePerMonth: 1500,
     },
   });
-  console.log('✅ Platform admin:', platformAdmin.email);
-
-  // ── Subscription Plans ──────────────────────────────────────────────────────
-  const basicPlan = await prisma.subscriptionPlan.upsert({
-    where: { id: 'plan-basic' },
-    update: {},
-    create: {
-      id: 'plan-basic',
-      name: 'Basic',
-      maxBranches: 2,
-      maxUsers: 5,
-      pricePerMonth: 990,
+  const tenant = await prisma.tenant.create({
+    data: {
+      name: 'ร้านผ่อนตัวอย่าง',
+      planId: plan.id,
+      subscriptionExpiresAt: new Date('2027-01-01'),
     },
   });
-
-  const proPlan = await prisma.subscriptionPlan.upsert({
-    where: { id: 'plan-pro' },
-    update: {},
-    create: {
-      id: 'plan-pro',
-      name: 'Pro',
-      maxBranches: 10,
-      maxUsers: 30,
-      pricePerMonth: 2990,
-    },
-  });
-  console.log('✅ Plans:', basicPlan.name, '/', proPlan.name);
-
-  // ── Tenant ──────────────────────────────────────────────────────────────────
-  const tenant = await prisma.tenant.upsert({
-    where: { id: 'tenant-demo' },
-    update: {},
-    create: {
-      id: 'tenant-demo',
-      name: 'Demo Shop',
-      isActive: true,
-      planId: proPlan.id,
-      subscriptionExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      defaultThreshold: 3,
-    },
-  });
-  console.log('✅ Tenant:', tenant.name);
-
-  // ── Branches ────────────────────────────────────────────────────────────────
-  const branch1 = await prisma.branch.upsert({
-    where: { id: 'branch-1' },
-    update: {},
-    create: {
-      id: 'branch-1',
+  const branch = await prisma.branch.create({
+    data: {
       tenantId: tenant.id,
-      name: 'สาขาลาดพร้าว',
-      address: '123 ถ.ลาดพร้าว แขวงจันทรเกษม เขตจตุจักร กรุงเทพฯ 10900',
+      name: 'สาขาสีลม',
+      address: 'ถนนสีลม กรุงเทพฯ',
     },
   });
 
-  const branch2 = await prisma.branch.upsert({
-    where: { id: 'branch-2' },
-    update: {},
-    create: {
-      id: 'branch-2',
+  await prisma.user.create({
+    data: {
       tenantId: tenant.id,
-      name: 'สาขาบางนา',
-      address: '456 ถ.บางนา-ตราด แขวงบางนา เขตบางนา กรุงเทพฯ 10260',
+      branchId: branch.id,
+      name: 'ผู้ดูแลร้าน',
+      email: 'admin@demo.local',
+      password,
+      role: 'ADMIN',
     },
   });
-  console.log('✅ Branches:', branch1.name, '/', branch2.name);
-
-  // ── Users ───────────────────────────────────────────────────────────────────
-  const userAdmin = await prisma.user.upsert({
-    where: { tenantId_email: { tenantId: tenant.id, email: 'admin@demo.com' } },
-    update: {},
-    create: {
+  const sale = await prisma.user.create({
+    data: {
       tenantId: tenant.id,
-      role: 'TENANT_ADMIN',
-      name: 'สมชาย แอดมิน',
-      email: 'admin@demo.com',
-      password: await bcrypt.hash('password123', 10),
-      commissionRateCash: 1.5,
-      commissionRateInstallment: 2.0,
-    },
-  });
-
-  const userLead = await prisma.user.upsert({
-    where: { tenantId_email: { tenantId: tenant.id, email: 'lead@demo.com' } },
-    update: {},
-    create: {
-      tenantId: tenant.id,
-      branchId: branch1.id,
-      role: 'SALE_LEAD',
-      name: 'สมหญิง หัวหน้าทีม',
-      email: 'lead@demo.com',
-      password: await bcrypt.hash('password123', 10),
-      commissionRateCash: 1.0,
-      commissionRateInstallment: 1.5,
-    },
-  });
-
-  const userSale = await prisma.user.upsert({
-    where: { tenantId_email: { tenantId: tenant.id, email: 'sale@demo.com' } },
-    update: {},
-    create: {
-      tenantId: tenant.id,
-      branchId: branch1.id,
+      branchId: branch.id,
+      name: 'สมชาย ใจดี',
+      email: 'sale@demo.local',
+      password,
       role: 'SALE',
-      name: 'มานี เซลล์',
-      email: 'sale@demo.com',
-      password: await bcrypt.hash('password123', 10),
-      commissionRateCash: 0.5,
-      commissionRateInstallment: 1.0,
+      installmentRate: SALE_INSTALLMENT_RATE,
+      cashRate: SALE_CASH_RATE,
     },
   });
-  console.log(
-    '✅ Users:',
-    userAdmin.name,
-    '/',
-    userLead.name,
-    '/',
-    userSale.name,
-  );
-
-  // ── Products ─────────────────────────────────────────────────────────────────
-  const product1 = await prisma.product.upsert({
-    where: { id: 'prod-1' },
-    update: {},
-    create: {
-      id: 'prod-1',
+  const lead = await prisma.user.create({
+    data: {
       tenantId: tenant.id,
-      name: 'iPhone 16 Pro 256GB',
-      description: 'สมาร์ทโฟน Apple รุ่นล่าสุด',
-      cashPrice: 42900,
-      downPayment: 5000,
-      dailyPrice: 165,
-      weeklyPrice: 1100,
-      monthlyPrice: 4200,
+      branchId: branch.id,
+      name: 'หัวหน้าทีมขาย',
+      email: 'lead@demo.local',
+      password,
+      role: 'SALE_LEAD',
+      overrideRate: LEAD_OVERRIDE_RATE,
     },
   });
 
-  const product2 = await prisma.product.upsert({
-    where: { id: 'prod-2' },
-    update: {},
-    create: {
-      id: 'prod-2',
-      tenantId: tenant.id,
-      name: 'Samsung Galaxy S25 128GB',
-      description: 'สมาร์ทโฟน Samsung รุ่นพรีเมียม',
-      cashPrice: 29900,
-      downPayment: 3000,
-      dailyPrice: 115,
-      weeklyPrice: 770,
-      monthlyPrice: 2990,
-    },
-  });
-
-  const product3 = await prisma.product.upsert({
-    where: { id: 'prod-3' },
-    update: {},
-    create: {
-      id: 'prod-3',
-      tenantId: tenant.id,
-      name: 'iPad Air 11" M3 64GB',
-      description: 'แท็บเล็ต Apple สำหรับงานสร้างสรรค์',
-      cashPrice: 22900,
+  const productsData = [
+    {
+      name: 'ทีวี 55 นิ้ว',
+      cashPrice: 18000,
       downPayment: 2000,
-      dailyPrice: 88,
-      weeklyPrice: 590,
-      monthlyPrice: 2290,
+      dailyPrice: 200,
+      weeklyPrice: 1200,
+      monthlyPrice: 4500,
     },
-  });
-  console.log('✅ Products: 3 items');
-
-  // ── Stock ───────────────────────────────────────────────────────────────────
-  const stocks = [
-    { branchId: branch1.id, productId: product1.id, quantity: 5 },
-    { branchId: branch1.id, productId: product2.id, quantity: 8 },
-    { branchId: branch1.id, productId: product3.id, quantity: 3 },
-    { branchId: branch2.id, productId: product1.id, quantity: 2 },
-    { branchId: branch2.id, productId: product2.id, quantity: 6 },
-    { branchId: branch2.id, productId: product3.id, quantity: 4 },
+    {
+      name: 'ตู้เย็น 2 ประตู',
+      cashPrice: 12000,
+      downPayment: 1500,
+      dailyPrice: 150,
+      weeklyPrice: 900,
+      monthlyPrice: 3200,
+    },
+    {
+      name: 'เครื่องซักผ้า',
+      cashPrice: 9000,
+      downPayment: 1000,
+      dailyPrice: 100,
+      weeklyPrice: 600,
+      monthlyPrice: 2200,
+    },
+    {
+      name: 'แอร์ 12000 BTU',
+      cashPrice: 16000,
+      downPayment: 1800,
+      dailyPrice: 180,
+      weeklyPrice: 1100,
+      monthlyPrice: 4000,
+    },
+    {
+      name: 'ไมโครเวฟ',
+      cashPrice: 4500,
+      downPayment: 500,
+      dailyPrice: 60,
+      weeklyPrice: 350,
+      monthlyPrice: 1200,
+    },
   ];
-
-  for (const s of stocks) {
-    await prisma.branchStock.upsert({
-      where: {
-        branchId_productId: { branchId: s.branchId, productId: s.productId },
+  const products = [];
+  for (const p of productsData) {
+    const product = await prisma.product.create({
+      data: { tenantId: tenant.id, ...p },
+    });
+    products.push(product);
+    await prisma.branchStock.create({
+      data: {
+        tenantId: tenant.id,
+        branchId: branch.id,
+        productId: product.id,
+        quantity: 12,
       },
-      update: { quantity: s.quantity },
-      create: { tenantId: tenant.id, ...s },
     });
   }
-  console.log('✅ Stock: 6 records');
 
-  // ── Customers ────────────────────────────────────────────────────────────────
-  const customer1 = await prisma.customer.upsert({
-    where: { id: 'cust-1' },
-    update: {},
-    create: {
-      id: 'cust-1',
-      tenantId: tenant.id,
-      name: 'วิชัย ลูกค้าดี',
-      phone: '0812345678',
+  const customersData = [
+    {
+      name: 'ปิยะ มั่งมี',
+      phone: '0810000001',
+      contractLimit: 3,
+      isSuspended: false,
+    },
+    {
+      name: 'อรทัย ดวงดี',
+      phone: '0810000002',
+      contractLimit: 3,
+      isSuspended: false,
+    },
+    {
+      name: 'สมพงษ์ ทองคำ',
+      phone: '0810000003',
       contractLimit: 2,
+      isSuspended: false,
     },
-  });
-
-  const customer2 = await prisma.customer.upsert({
-    where: { id: 'cust-2' },
-    update: {},
-    create: {
-      id: 'cust-2',
-      tenantId: tenant.id,
-      name: 'นภา ซื้อบ่อย',
-      phone: '0823456789',
-      contractLimit: 1,
+    {
+      name: 'มาลี ศรีนวล',
+      phone: '0810000004',
+      contractLimit: 2,
+      isSuspended: false,
     },
-  });
-
-  const customer3 = await prisma.customer.upsert({
-    where: { id: 'cust-3' },
-    update: {},
-    create: {
-      id: 'cust-3',
-      tenantId: tenant.id,
-      name: 'ประสิทธิ์ ค้างชำระ',
-      phone: '0834567890',
-      contractLimit: 1,
+    {
+      name: 'ชัยวัฒน์ พูลทรัพย์',
+      phone: '0810000005',
+      contractLimit: 2,
+      isSuspended: false,
+    },
+    {
+      name: 'วันดี สุขใจ',
+      phone: '0810000006',
+      contractLimit: 2,
+      isSuspended: false,
+    },
+    {
+      name: 'ก้อง ศรีสุข',
+      phone: '0810000007',
+      contractLimit: 2,
       isSuspended: true,
     },
-  });
-  console.log(
-    '✅ Customers:',
-    customer1.name,
-    '/',
-    customer2.name,
-    '/',
-    customer3.name,
-  );
-
-  // ── Contracts ────────────────────────────────────────────────────────────────
-  const now = new Date();
-
-  const contract1 = await prisma.contract.upsert({
-    where: { id: 'contract-1' },
-    update: {},
-    create: {
-      id: 'contract-1',
-      tenantId: tenant.id,
-      customerId: customer1.id,
-      productId: product1.id,
-      branchId: branch1.id,
-      saleId: userSale.id,
-      paymentType: 'MONTHLY',
-      status: 'ACTIVE',
-      totalAmount: 50400,
-      installmentCount: 12,
-      downPaymentPaid: true,
-      warrantyActive: true,
+    {
+      name: 'นภา จันทร์เพ็ญ',
+      phone: '0810000008',
+      contractLimit: 2,
+      isSuspended: false,
     },
-  });
+    {
+      name: 'ธนา รุ่งเรือง',
+      phone: '0810000009',
+      contractLimit: 3,
+      isSuspended: false,
+    },
+    {
+      name: 'ศิริพร แก้วใส',
+      phone: '0810000010',
+      contractLimit: 2,
+      isSuspended: false,
+    },
+    {
+      name: 'ประเสริฐ ทวีสุข',
+      phone: '0810000011',
+      contractLimit: 2,
+      isSuspended: false,
+    },
+    {
+      name: 'กนกพร อินทร์งาม',
+      phone: '0810000012',
+      contractLimit: 2,
+      isSuspended: false,
+    },
+  ];
+  const customers = [];
+  for (const c of customersData) {
+    customers.push(
+      await prisma.customer.create({ data: { tenantId: tenant.id, ...c } }),
+    );
+  }
 
-  const contract2 = await prisma.contract.upsert({
-    where: { id: 'contract-2' },
-    update: {},
-    create: {
-      id: 'contract-2',
-      tenantId: tenant.id,
-      customerId: customer2.id,
-      productId: product2.id,
-      branchId: branch1.id,
-      saleId: userSale.id,
+  type ApproveMode = 'none' | 'down' | 'partial' | 'all';
+  interface Spec {
+    customer: number;
+    product: number;
+    paymentType: ScheduleType;
+    startOffsetDays: number;
+    approve: ApproveMode;
+    defaulted?: boolean;
+  }
+
+  const specs: Spec[] = [
+    {
+      customer: 0,
+      product: 0,
+      paymentType: 'DAILY',
+      startOffsetDays: 12,
+      approve: 'down',
+    },
+    {
+      customer: 1,
+      product: 1,
       paymentType: 'WEEKLY',
-      status: 'ACTIVE',
-      totalAmount: 35880,
-      installmentCount: 24,
-      downPaymentPaid: true,
-      warrantyActive: false,
+      startOffsetDays: 28,
+      approve: 'partial',
     },
-  });
-  console.log('✅ Contracts: 2 active');
-
-  // ── Payments ─────────────────────────────────────────────────────────────────
-  const payment1 = await prisma.payment.upsert({
-    where: { id: 'pay-1' },
-    update: {},
-    create: {
-      id: 'pay-1',
-      tenantId: tenant.id,
-      contractId: contract1.id,
-      amount: 4200,
-      dueDate: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-      paidAt: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-      status: 'APPROVED',
-      method: 'CASH',
-      approvedById: userLead.id,
-      approvedAt: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+    {
+      customer: 2,
+      product: 2,
+      paymentType: 'MONTHLY',
+      startOffsetDays: 3,
+      approve: 'none',
     },
-  });
-
-  const payment2 = await prisma.payment.upsert({
-    where: { id: 'pay-2' },
-    update: {},
-    create: {
-      id: 'pay-2',
-      tenantId: tenant.id,
-      contractId: contract1.id,
-      amount: 4200,
-      dueDate: new Date(now.getFullYear(), now.getMonth(), 1),
-      status: 'PENDING',
+    {
+      customer: 3,
+      product: 3,
+      paymentType: 'MONTHLY',
+      startOffsetDays: 400,
+      approve: 'all',
     },
-  });
-
-  const payment3 = await prisma.payment.upsert({
-    where: { id: 'pay-3' },
-    update: {},
-    create: {
-      id: 'pay-3',
-      tenantId: tenant.id,
-      contractId: contract2.id,
-      amount: 1495,
-      dueDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7),
-      paidAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7),
-      status: 'APPROVED',
-      method: 'TRANSFER_SLIP',
-      slipImageUrl: 'https://example.com/slip/pay-3.jpg',
-      approvedById: userAdmin.id,
-      approvedAt: new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate() - 6,
-      ),
+    {
+      customer: 4,
+      product: 4,
+      paymentType: 'CASH',
+      startOffsetDays: 2,
+      approve: 'all',
     },
-  });
-  console.log('✅ Payments: 3 records (2 approved, 1 pending)');
-
-  // ── Commissions ──────────────────────────────────────────────────────────────
-  await prisma.commission.upsert({
-    where: { id: 'comm-1' },
-    update: {},
-    create: {
-      id: 'comm-1',
-      tenantId: tenant.id,
-      paymentId: payment1.id,
-      userId: userSale.id,
-      amount: 42,
-      type: 'SALE_COMMISSION',
+    {
+      customer: 5,
+      product: 0,
+      paymentType: 'DAILY',
+      startOffsetDays: 45,
+      approve: 'down',
+      defaulted: true,
     },
-  });
-
-  await prisma.commission.upsert({
-    where: { id: 'comm-2' },
-    update: {},
-    create: {
-      id: 'comm-2',
-      tenantId: tenant.id,
-      paymentId: payment1.id,
-      userId: userLead.id,
-      amount: 21,
-      type: 'OVERRIDE_COMMISSION',
+    {
+      customer: 6,
+      product: 1,
+      paymentType: 'WEEKLY',
+      startOffsetDays: 70,
+      approve: 'down',
+      defaulted: true,
     },
-  });
-
-  await prisma.commission.upsert({
-    where: { id: 'comm-3' },
-    update: {},
-    create: {
-      id: 'comm-3',
-      tenantId: tenant.id,
-      paymentId: payment3.id,
-      userId: userSale.id,
-      amount: 63,
-      type: 'SALE_COMMISSION',
+    {
+      customer: 7,
+      product: 2,
+      paymentType: 'MONTHLY',
+      startOffsetDays: 1,
+      approve: 'none',
     },
-  });
-  console.log('✅ Commissions: 3 records');
+    {
+      customer: 1,
+      product: 4,
+      paymentType: 'CASH',
+      startOffsetDays: 6,
+      approve: 'all',
+    },
+    {
+      customer: 8,
+      product: 3,
+      paymentType: 'WEEKLY',
+      startOffsetDays: 14,
+      approve: 'partial',
+    },
+    {
+      customer: 9,
+      product: 2,
+      paymentType: 'DAILY',
+      startOffsetDays: 6,
+      approve: 'partial',
+    },
+    {
+      customer: 10,
+      product: 0,
+      paymentType: 'MONTHLY',
+      startOffsetDays: 90,
+      approve: 'all',
+    },
+    {
+      customer: 11,
+      product: 4,
+      paymentType: 'DAILY',
+      startOffsetDays: 2,
+      approve: 'down',
+    },
+    {
+      customer: 0,
+      product: 3,
+      paymentType: 'WEEKLY',
+      startOffsetDays: 4,
+      approve: 'none',
+    },
+  ];
 
-  console.log('\n🎉 Seed complete!\n');
-  console.log('── Login Credentials ───────────────────────────');
-  console.log('Platform Admin : admin@platform.com / password123');
-  console.log('Tenant Admin   : admin@demo.com     / password123');
-  console.log('Sale Lead      : lead@demo.com      / password123');
-  console.log('Sale           : sale@demo.com      / password123');
-  console.log('────────────────────────────────────────────────');
+  const soldByProduct: Record<string, number> = {};
+  for (const spec of specs) {
+    const product = products[spec.product];
+    const customer = customers[spec.customer];
+    const startDate = subDays(new Date(), spec.startOffsetDays);
+
+    const schedule = ContractsService.buildSchedule({
+      paymentType: spec.paymentType,
+      startDate,
+      downPayment: Number(product.downPayment),
+      dailyPrice: Number(product.dailyPrice),
+      weeklyPrice: Number(product.weeklyPrice),
+      monthlyPrice: Number(product.monthlyPrice),
+      cashPrice: Number(product.cashPrice),
+    });
+    const installmentCount =
+      spec.paymentType === 'CASH'
+        ? 1
+        : schedule.filter((i) => !i.isDownPayment).length;
+
+    const approveCount =
+      spec.approve === 'none'
+        ? 0
+        : spec.approve === 'down'
+          ? 1
+          : spec.approve === 'all'
+            ? schedule.length
+            : 1 + Math.floor((schedule.length - 1) * 0.4);
+
+    const status = spec.defaulted
+      ? 'DEFAULTED'
+      : approveCount === 0
+        ? 'PENDING_DOWN_PAYMENT'
+        : approveCount >= schedule.length
+          ? 'COMPLETED'
+          : 'ACTIVE';
+
+    const contract = await prisma.contract.create({
+      data: {
+        tenantId: tenant.id,
+        customerId: customer.id,
+        productId: product.id,
+        branchId: branch.id,
+        saleId: sale.id,
+        paymentType: spec.paymentType,
+        totalAmount: schedule.reduce((s, i) => s + i.amount, 0),
+        installmentCount,
+        status,
+        downPaymentPaid: approveCount >= 1,
+        warrantyActive: status === 'COMPLETED',
+        payments: {
+          create: schedule.map((i) => ({
+            tenantId: tenant.id,
+            amount: i.amount,
+            dueDate: i.dueDate,
+            isDownPayment: i.isDownPayment,
+          })),
+        },
+      },
+    });
+
+    if (approveCount >= 1) {
+      soldByProduct[product.id] = (soldByProduct[product.id] ?? 0) + 1;
+    }
+
+    const payments = await prisma.payment.findMany({
+      where: { contractId: contract.id },
+      orderBy: { dueDate: 'asc' },
+    });
+    const rate =
+      spec.paymentType === 'CASH' ? SALE_CASH_RATE : SALE_INSTALLMENT_RATE;
+
+    for (
+      let index = 0;
+      index < approveCount && index < payments.length;
+      index++
+    ) {
+      const payment = payments[index];
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'APPROVED',
+          method: 'CASH',
+          paidAt: payment.dueDate,
+          approvedById: sale.id,
+          approvedAt: payment.dueDate,
+        },
+      });
+      const amount = Number(payment.amount);
+      await prisma.commission.create({
+        data: {
+          tenantId: tenant.id,
+          paymentId: payment.id,
+          userId: sale.id,
+          amount: round2(amount * rate),
+          type: 'SALE',
+        },
+      });
+      await prisma.commission.create({
+        data: {
+          tenantId: tenant.id,
+          paymentId: payment.id,
+          userId: lead.id,
+          amount: round2(amount * LEAD_OVERRIDE_RATE),
+          type: 'SALE_LEAD',
+        },
+      });
+    }
+  }
+
+  // Reflect goods that left the store: one unit per contract whose down payment
+  // was approved, subtracted from that product's branch stock.
+  for (const product of products) {
+    const sold = soldByProduct[product.id] ?? 0;
+    await prisma.branchStock.update({
+      where: {
+        branchId_productId: { branchId: branch.id, productId: product.id },
+      },
+      data: { quantity: 12 - sold },
+    });
+  }
+
+  const counts = {
+    customers: customers.length,
+    products: products.length,
+    contracts: specs.length,
+  };
+  console.log('Seed complete:', counts);
+  console.log('Demo login (tenant app):');
+  console.log('  admin@demo.local / ' + DEMO_PASSWORD + ' (ADMIN)');
+  console.log('  sale@demo.local  / ' + DEMO_PASSWORD + ' (SALE)');
+  console.log('  lead@demo.local  / ' + DEMO_PASSWORD + ' (SALE_LEAD)');
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
+  .then(() => prisma.$disconnect())
+  .catch(async (err) => {
+    console.error(err);
+    await prisma.$disconnect();
     process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+  });
