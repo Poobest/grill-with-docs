@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import {
   CurrentUser,
+  TenantId,
   type AuthUser,
 } from '../../common/decorators/current-user.decorator';
 import { ContractsService } from './contracts.service';
@@ -13,6 +14,11 @@ export class ContractsController {
   @Get()
   list(@CurrentUser() user: AuthUser) {
     return this.contracts.list(user.tenantId);
+  }
+
+  @Get(':id')
+  detail(@TenantId() tenantId: string, @Param('id') id: string) {
+    return this.contracts.getDetail(tenantId, id);
   }
 
   @Post()

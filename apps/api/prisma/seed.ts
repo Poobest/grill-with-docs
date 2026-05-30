@@ -201,6 +201,30 @@ async function main() {
       contractLimit: 2,
       isSuspended: false,
     },
+    {
+      name: 'ธนา รุ่งเรือง',
+      phone: '0810000009',
+      contractLimit: 3,
+      isSuspended: false,
+    },
+    {
+      name: 'ศิริพร แก้วใส',
+      phone: '0810000010',
+      contractLimit: 2,
+      isSuspended: false,
+    },
+    {
+      name: 'ประเสริฐ ทวีสุข',
+      phone: '0810000011',
+      contractLimit: 2,
+      isSuspended: false,
+    },
+    {
+      name: 'กนกพร อินทร์งาม',
+      phone: '0810000012',
+      contractLimit: 2,
+      isSuspended: false,
+    },
   ];
   const customers = [];
   for (const c of customersData) {
@@ -284,6 +308,41 @@ async function main() {
       paymentType: 'CASH',
       startOffsetDays: 6,
       approve: 'all',
+    },
+    {
+      customer: 8,
+      product: 3,
+      paymentType: 'WEEKLY',
+      startOffsetDays: 14,
+      approve: 'partial',
+    },
+    {
+      customer: 9,
+      product: 2,
+      paymentType: 'DAILY',
+      startOffsetDays: 6,
+      approve: 'partial',
+    },
+    {
+      customer: 10,
+      product: 0,
+      paymentType: 'MONTHLY',
+      startOffsetDays: 90,
+      approve: 'all',
+    },
+    {
+      customer: 11,
+      product: 4,
+      paymentType: 'DAILY',
+      startOffsetDays: 2,
+      approve: 'down',
+    },
+    {
+      customer: 0,
+      product: 3,
+      paymentType: 'WEEKLY',
+      startOffsetDays: 4,
+      approve: 'none',
     },
   ];
 

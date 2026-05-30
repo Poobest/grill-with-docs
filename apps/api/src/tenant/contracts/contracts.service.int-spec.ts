@@ -42,7 +42,12 @@ describe('ContractsService.create (integration)', () => {
     service = new ContractsService(prisma);
 
     const plan = await prisma.subscriptionPlan.create({
-      data: { name: 'Test Plan', maxBranches: 5, maxUsers: 20, pricePerMonth: 990 },
+      data: {
+        name: 'Test Plan',
+        maxBranches: 5,
+        maxUsers: 20,
+        pricePerMonth: 990,
+      },
     });
     ids.plan = plan.id;
 
@@ -137,6 +142,30 @@ describe('ContractsService.create (integration)', () => {
     });
     expect(payments).toHaveLength(31);
     expect(payments.filter((p) => p.isDownPayment)).toHaveLength(1);
+  });
+
+  it('returns full contract detail with its schedule', async () => {
+    const created = await service.create({
+      tenantId: ids.tenant,
+      customerId: ids.customer,
+      productId: ids.product,
+      branchId: ids.branch,
+      saleId: ids.sale,
+      paymentType: 'DAILY',
+    });
+
+    const detail = await service.getDetail(ids.tenant, created.id);
+    expect(detail.customerName).toBe('ลูกค้าทดสอบ');
+    expect(detail.productName).toBe('ทีวี 55 นิ้ว');
+    expect(detail.payments).toHaveLength(31);
+    expect(detail.payments[0].isDownPayment).toBe(true);
+    expect(detail.paidCount).toBe(0);
+  });
+
+  it('throws 404 for a contract outside the tenant / not found', async () => {
+    await expect(
+      service.getDetail(ids.tenant, 'does-not-exist'),
+    ).rejects.toThrow();
   });
 
   it('rejects a suspended customer with a 400', async () => {

@@ -1,5 +1,9 @@
 import { addDays, addWeeks, addMonths } from 'date-fns';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Contract } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CustomersService } from '../customers/customers.service';
@@ -48,6 +52,35 @@ export interface ContractListItem {
   status: string;
   totalAmount: number;
   outstanding: number;
+}
+
+export interface ContractDetailPayment {
+  id: string;
+  seq: number;
+  amount: number;
+  dueDate: string;
+  isDownPayment: boolean;
+  status: string;
+  method: string | null;
+  paidAt: string | null;
+  receiptNumber: string | null;
+}
+
+export interface ContractDetail {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  productName: string;
+  branchName: string;
+  saleName: string;
+  paymentType: string;
+  status: string;
+  totalAmount: number;
+  outstanding: number;
+  installmentCount: number;
+  paidCount: number;
+  createdAt: string;
+  payments: ContractDetailPayment[];
 }
 
 /** Contract statuses that count against a customer's contract limit. */
@@ -182,6 +215,61 @@ export class ContractsService {
         outstanding,
       };
     });
+  }
+
+  /**
+   * Full contract detail with its payment schedule, for the detail page.
+   * Scoped to the tenant; throws 404 if not found in this tenant.
+   */
+  async getDetail(
+    tenantId: string,
+    contractId: string,
+  ): Promise<ContractDetail> {
+    const contract = await this.prisma.contract.findFirst({
+      where: { id: contractId, tenantId },
+      include: {
+        customer: { select: { name: true, phone: true } },
+        product: { select: { name: true } },
+        branch: { select: { name: true } },
+        sale: { select: { name: true } },
+        payments: { orderBy: { dueDate: 'asc' } },
+      },
+    });
+    if (!contract) throw new NotFoundException('ไม่พบสัญญา');
+
+    const payments = contract.payments.map((p, index) => ({
+      id: p.id,
+      seq: p.isDownPayment ? 0 : index,
+      amount: Number(p.amount),
+      dueDate: p.dueDate.toISOString(),
+      isDownPayment: p.isDownPayment,
+      status: p.status,
+      method: p.method,
+      paidAt: p.paidAt ? p.paidAt.toISOString() : null,
+      receiptNumber: p.receiptNumber,
+    }));
+
+    const paidCount = payments.filter((p) => p.status === 'APPROVED').length;
+    const outstanding = payments
+      .filter((p) => p.status !== 'APPROVED')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    return {
+      id: contract.id,
+      customerName: contract.customer.name,
+      customerPhone: contract.customer.phone,
+      productName: contract.product.name,
+      branchName: contract.branch.name,
+      saleName: contract.sale.name,
+      paymentType: contract.paymentType,
+      status: contract.status,
+      totalAmount: Number(contract.totalAmount),
+      outstanding,
+      installmentCount: contract.installmentCount,
+      paidCount,
+      createdAt: contract.createdAt.toISOString(),
+      payments,
+    };
   }
 
   /**
