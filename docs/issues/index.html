@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Issues — Installment SaaS</title>
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --muted: #718096;
+      --primary: #3b82f6;
+      --primary-light: #eff6ff;
+      --green: #059669; --green-bg: #ecfdf5;
+      --yellow: #b45309; --yellow-bg: #fffbeb;
+      --red: #dc2626; --red-bg: #fef2f2;
+      --purple: #7c3aed; --purple-bg: #f5f3ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, 'Noto Sans Thai', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; }
+
+    /* Layout */
+    .layout { display: flex; min-height: 100vh; }
+    nav {
+      width: 240px; flex-shrink: 0; background: var(--surface);
+      border-right: 1px solid var(--border); position: sticky;
+      top: 0; height: 100vh; overflow-y: auto; padding: 20px 0;
+    }
+    nav .logo { padding: 0 16px 16px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+    nav .logo .back { font-size: 12px; color: var(--primary); text-decoration: none; display: block; margin-bottom: 8px; }
+    nav .logo h2 { font-size: 13px; font-weight: 800; }
+    nav .logo span { font-size: 11px; color: var(--muted); }
+    nav .section-label { padding: 10px 16px 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+    nav ul { list-style: none; }
+    nav li a { display: flex; align-items: center; gap: 8px; padding: 6px 16px; font-size: 13px; color: var(--muted); text-decoration: none; border-left: 3px solid transparent; transition: all 0.15s; }
+    nav li a:hover, nav li a.active { color: var(--primary); background: var(--primary-light); border-left-color: var(--primary); }
+    nav li a .num { font-size: 11px; font-weight: 700; background: var(--bg); padding: 1px 6px; border-radius: 4px; }
+
+    main { flex: 1; padding: 36px 48px; }
+
+    /* Header */
+    .page-header { margin-bottom: 36px; padding-bottom: 24px; border-bottom: 2px solid var(--border); }
+    .page-header .meta { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+    .tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+    .tag-issues { background: var(--primary); color: #fff; }
+    .tag-count { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+    .page-header h1 { font-size: 24px; font-weight: 800; }
+    .page-header p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+    /* Roadmap */
+    .roadmap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 40px; }
+    .roadmap h3 { font-size: 14px; font-weight: 700; margin-bottom: 16px; }
+    .weeks { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+    .week { flex-shrink: 0; min-width: 180px; }
+    .week-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
+    .week-items { display: flex; flex-direction: column; gap: 6px; }
+    .week-chip { font-size: 12px; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; gap: 6px; cursor: pointer; text-decoration: none; color: var(--text); transition: all 0.15s; }
+    .week-chip:hover { border-color: var(--primary); color: var(--primary); }
+    .week-chip .chip-num { font-weight: 700; color: var(--muted); font-size: 11px; }
+    .week-chip.done { background: var(--green-bg); border-color: #a7f3d0; }
+    .week-chip.hitl { background: var(--yellow-bg); border-color: #fde68a; }
+
+    /* Issue cards */
+    .issues-list { display: flex; flex-direction: column; gap: 20px; }
+    .issue-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; scroll-margin-top: 20px; }
+    .issue-card:target { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+    .issue-header { padding: 18px 24px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 14px; }
+    .issue-header .issue-num {
+      flex-shrink: 0; width: 36px; height: 36px; border-radius: 8px;
+      font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+      background: var(--primary-light); color: var(--primary);
+    }
+    .issue-header .issue-num.done { background: var(--green-bg); color: var(--green); }
+    .issue-header .issue-num.hitl { background: var(--yellow-bg); color: var(--yellow); }
+    .issue-header .issue-meta { flex: 1; }
+    .issue-header h2 { font-size: 16px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; }
+    .issue-header .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+    .badge-afk { background: var(--primary-light); color: var(--primary); }
+    .badge-hitl { background: var(--yellow-bg); color: var(--yellow); }
+    .badge-done { background: var(--green-bg); color: var(--green); }
+    .badge-blocked { background: #fef3c7; color: #92400e; }
+    .badge-parallel { background: var(--purple-bg); color: var(--purple); }
+
+    .issue-body { padding: 20px 24px; }
+    .issue-section { margin-bottom: 20px; }
+    .issue-section:last-child { margin-bottom: 0; }
+    .issue-section h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 10px; }
+    .issue-section p { font-size: 14px; line-height: 1.7; }
+    .issue-section ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+    .issue-section ul li { font-size: 13.5px; }
+
+    /* Criteria checkboxes */
+    .criteria { display: flex; flex-direction: column; gap: 6px; }
+    .criterion { display: flex; gap: 10px; align-items: flex-start; padding: 7px 10px; border-radius: 6px; background: var(--bg); font-size: 13.5px; line-height: 1.5; }
+    .criterion .check { flex-shrink: 0; width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 4px; margin-top: 2px; }
+    .criterion code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #e8f0fe; color: #1e40af; padding: 1px 5px; border-radius: 3px; }
+    .criterion.highlight { background: #eff6ff; border-left: 3px solid var(--primary); }
+    .criterion.highlight .check { border-color: var(--primary); }
+
+    /* Two-col */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+    th { background: var(--bg); padding: 7px 12px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); border-bottom: 1px solid var(--border); }
+    td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg); }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; color: #1e40af; }
+
+    /* Schedule box */
+    .schedule-box { background: #0f172a; color: #e2e8f0; padding: 14px 18px; border-radius: 8px; font-family: monospace; font-size: 13px; line-height: 1.9; }
+
+    /* Decision box */
+    .decision-box { background: var(--yellow-bg); border: 1px solid #fde68a; border-radius: 8px; padding: 14px 18px; font-size: 13.5px; }
+    .decision-box p { margin-bottom: 8px; }
+    .decision-options { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .decision-option { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 13px; }
+    .decision-option strong { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+
+    @media print {
+      nav { display: none; }
+      main { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav>
+    <div class="logo">
+      <a class="back" href="../index.html">← กลับหน้าหลัก</a>
+      <h2>Issues / Vertical Slices</h2>
+      <span>Installment SaaS v1 · 12 issues</span>
+    </div>
+    <ul>
+      <li class="section-label">สัปดาห์ 1</li>
+      <li><a href="#issue-00"><span class="num">#00</span>Foundation Scaffold</a></li>
+      <li><a href="#issue-01"><span class="num">#01</span>Auth Dual JWT</a></li>
+      <li><a href="#issue-02"><span class="num">#02</span>Plans + Tenants</a></li>
+      <li><a href="#issue-03"><span class="num">#03</span>Branches + Users</a></li>
+      <li class="section-label">สัปดาห์ 2</li>
+      <li><a href="#issue-04"><span class="num">#04</span>Products + Stock</a></li>
+      <li><a href="#issue-05"><span class="num">#05</span>Customers + Contracts</a></li>
+      <li><a href="#issue-11"><span class="num">#11</span>Tests</a></li>
+      <li class="section-label">สัปดาห์ 3</li>
+      <li><a href="#issue-06"><span class="num">#06</span>Payments + Commission</a></li>
+      <li><a href="#issue-07"><span class="num">#07</span>Dashboard KPI</a></li>
+      <li class="section-label">สัปดาห์ 4</li>
+      <li><a href="#issue-08"><span class="num">#08</span>Background Jobs</a></li>
+      <li class="section-label">สัปดาห์ 5+</li>
+      <li><a href="#issue-09"><span class="num">#09</span>LINE LIFF Architecture</a></li>
+      <li><a href="#issue-10"><span class="num">#10</span>LINE LIFF Impl.</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <div class="page-header">
+      <div class="meta">
+        <span class="tag tag-issues">Issues</span>
+        <span class="tag tag-count">12 vertical slices</span>
+        <a href="../prd/installment-saas-v1.html" style="font-size:12px;color:var(--primary);text-decoration:none;">→ ดู PRD</a>
+      </div>
+      <h1>Vertical Slices — Installment SaaS</h1>
+      <p>แต่ละ issue คือ tracer bullet ที่ตัดผ่านทุก layer (API + Frontend) และ deploy ได้อิสระ</p>
+    </div>
+
+    <!-- Roadmap -->
+    <div class="roadmap">
+      <h3>Implementation Roadmap</h3>
+      <div class="weeks">
+        <div class="week">
+          <div class="week-label">สัปดาห์ 1</div>
+          <div class="week-items">
+            <a href="#issue-00" class="week-chip done"><span class="chip-num">#00</span>Foundation Scaffold</a>
+            <a href="#issue-01" class="week-chip"><span class="chip-num">#01</span>Auth Dual JWT</a>
+            <a href="#issue-02" class="week-chip"><span class="chip-num">#02</span>Plans + Tenants</a>
+            <a href="#issue-03" class="week-chip"><span class="chip-num">#03</span>Branches + Users</a>
+          </div>
+        </div>
+        <div class="week">
+          <div class="week-label">สัปดาห์ 2</div>
+          <div class="week-items">
+            <a href="#issue-04" class="week-chip"><span class="chip-num">#04</span>Products + Stock</a>
+            <a href="#issue-05" class="week-chip"><span class="chip-num">#05</span>Customers + Contracts</a>
+            <a href="#issue-11" class="week-chip"><span class="chip-num">#11</span>Tests (parallel)</a>
+          </div>
+        </div>
+        <div class="week">
+          <div class="week-label">สัปดาห์ 3</div>
+          <div class="week-items">
+            <a href="#issue-06" class="week-chip"><span class="chip-num">#06</span>Payments + Commission</a>
+            <a href="#issue-07" class="week-chip"><span class="chip-num">#07</span>Dashboard KPI</a>
+          </div>
+        </div>
+        <div class="week">
+          <div class="week-label">สัปดาห์ 4</div>
+          <div class="week-items">
+            <a href="#issue-08" class="week-chip"><span class="chip-num">#08</span>Background Jobs</a>
+          </div>
+        </div>
+        <div class="week">
+          <div class="week-label">สัปดาห์ 5+</div>
+          <div class="week-items">
+            <a href="#issue-09" class="week-chip hitl"><span class="chip-num">#09</span>LINE LIFF Architecture</a>
+            <a href="#issue-10" class="week-chip"><span class="chip-num">#10</span>LINE LIFF Impl.</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issues list -->
+    <div class="issues-list">
+
+      <!-- #00 -->
+      <div class="issue-card" id="issue-00">
+        <div class="issue-header">
+          <div class="issue-num done">00</div>
+          <div class="issue-meta">
+            <h2>Foundation: Monorepo Scaffold + Database Schema</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-done">✓ Skeleton Ready</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>สร้าง monorepo skeleton ทั้งหมดตั้งแต่ต้น รวมถึง pnpm workspace, NestJS API app, Vue 3 frontend apps (platform + tenant), Prisma schema ครบ, และ Docker Compose สำหรับ infrastructure ทุก slice ถัดไปต้องรอ slice นี้เสร็จก่อน</p>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div><code>pnpm install</code> สำเร็จ ไม่มี error</div></div>
+              <div class="criterion"><div class="check"></div><div><code>docker compose up -d</code> เริ่ม PostgreSQL และ Redis ได้</div></div>
+              <div class="criterion"><div class="check"></div><div><code>npx prisma db push</code> apply schema สำเร็จ — มี tables ครบใน database</div></div>
+              <div class="criterion"><div class="check"></div><div><code>pnpm dev:api</code> เริ่ม NestJS บน port 3000 ได้</div></div>
+              <div class="criterion"><div class="check"></div><div><code>pnpm dev:platform</code> เริ่ม Vue 3 บน port 5174 ได้</div></div>
+              <div class="criterion"><div class="check"></div><div><code>pnpm dev:tenant</code> เริ่ม Vue 3 บน port 5175 ได้</div></div>
+              <div class="criterion"><div class="check"></div><div>Prisma schema มี models: PlatformAdmin, SubscriptionPlan, Tenant, Branch, User, Product, BranchStock, Customer, Contract, Payment, Commission, LateFee</div></div>
+              <div class="criterion"><div class="check"></div><div>ทุก model ยกเว้น PlatformAdmin และ SubscriptionPlan มี <code>tenantId</code> field</div></div>
+              <div class="criterion"><div class="check"></div><div>Contract มี status enum: PENDING_DOWN_PAYMENT, ACTIVE, COMPLETED, CANCELLED, DEFAULTED</div></div>
+              <div class="criterion"><div class="check"></div><div>Payment มี status enum: PENDING, APPROVED, REJECTED และ method enum: CASH, TRANSFER_SLIP</div></div>
+              <div class="criterion"><div class="check"></div><div>Seed script สร้าง demo data ได้: Platform Admin, 2 Plans, 1 Tenant, 2 Branches, 4 Users</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #01 -->
+      <div class="issue-card" id="issue-01">
+        <div class="issue-header">
+          <div class="issue-num">01</div>
+          <div class="issue-meta">
+            <h2>Auth: Dual JWT (Platform + Tenant)</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #00</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>ระบบ authentication แบบ dual JWT โดยแยก secret สำหรับ Platform Admin และ Tenant User อย่างชัดเจน พร้อม Global JwtAuthGuard ที่ปิดทุก route โดย default และ <code>@Public()</code> decorator สำหรับเปิดเฉพาะ endpoint ที่ต้องการ</p>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div><code>POST /api/auth/login</code> คืน JWT token สำหรับ Tenant User ได้</div></div>
+              <div class="criterion"><div class="check"></div><div><code>POST /api/auth/platform/login</code> คืน JWT token สำหรับ Platform Admin ได้</div></div>
+              <div class="criterion"><div class="check"></div><div><code>POST /api/auth/platform/setup</code> สร้าง Platform Admin คนแรกได้ (เรียกครั้งเดียว)</div></div>
+              <div class="criterion"><div class="check"></div><div>JWT payload มี: <code>sub</code> (userId), <code>tenantId</code>, <code>role</code></div></div>
+              <div class="criterion"><div class="check"></div><div>Global JwtAuthGuard ติดทุก route — route ที่ไม่มี token คืน 401</div></div>
+              <div class="criterion"><div class="check"></div><div>Route ที่ mark <code>@Public()</code> ผ่านได้โดยไม่ต้องมี token</div></div>
+              <div class="criterion"><div class="check"></div><div>Platform Admin token ใช้กับ Tenant endpoint ไม่ได้ (ถูก reject)</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant User token ใช้กับ Platform endpoint ไม่ได้ (ถูก reject)</div></div>
+              <div class="criterion"><div class="check"></div><div>SubscriptionGuard block Tenant ที่ <code>isActive = false</code> หรือ <code>subscriptionExpiresAt</code> หมดอายุ คืน 403</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #02 -->
+      <div class="issue-card" id="issue-02">
+        <div class="issue-header">
+          <div class="issue-num">02</div>
+          <div class="issue-meta">
+            <h2>Platform: Subscription Plans + Tenant Management</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #01</span>
+              <span class="badge badge-parallel">Parallel กับ #03</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>Platform Admin สามารถจัดการ Subscription Plan และ Tenant ผ่าน Platform app ได้ครบ รวมถึงการ extend subscription ด้วยตัวเองหลังยืนยันการโอนเงิน (manual payment flow ตาม ADR-0004)</p>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div><code>GET/POST/PATCH/DELETE /api/platform/plans</code> — CRUD สำหรับ Subscription Plan (maxBranches, maxUsers, pricePerMonth)</div></div>
+              <div class="criterion"><div class="check"></div><div><code>GET /api/platform/tenants</code> — ดูรายการ Tenant ทั้งหมดพร้อมสถานะ subscription</div></div>
+              <div class="criterion"><div class="check"></div><div><code>POST /api/platform/tenants</code> — สร้าง Tenant ใหม่พร้อมกำหนด plan</div></div>
+              <div class="criterion"><div class="check"></div><div><code>PATCH /api/platform/tenants/:id</code> — extend subscription และ toggle <code>isActive</code></div></div>
+              <div class="criterion"><div class="check"></div><div>Platform app (port 5174) มีหน้า: Login, Plans CRUD, Tenants list, Tenant detail + extend form</div></div>
+              <div class="criterion"><div class="check"></div><div>การสร้าง Tenant ตรวจว่า plan ที่เลือกมีอยู่จริง</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant ที่ถูก lock (<code>isActive = false</code>) ไม่สามารถ login ผ่าน Tenant app ได้</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #03 -->
+      <div class="issue-card" id="issue-03">
+        <div class="issue-header">
+          <div class="issue-num">03</div>
+          <div class="issue-meta">
+            <h2>Tenant: Branches + Users</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #01</span>
+              <span class="badge badge-parallel">Parallel กับ #02</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>Tenant Admin จัดการสาขาและ User ได้ภายในขีดจำกัดของ Subscription Plan ระบบต้องตรวจ hard limit จาก plan ก่อนสร้าง Branch หรือ User ใหม่</p>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div><code>GET/POST/PATCH/DELETE /api/branches</code> — CRUD สาขา</div></div>
+              <div class="criterion"><div class="check"></div><div>การสร้างสาขาตรวจ <code>plan.maxBranches</code> — ถ้าเกินคืน 400</div></div>
+              <div class="criterion"><div class="check"></div><div><code>GET/POST/PATCH/DELETE /api/users</code> — CRUD User ภายใน tenant</div></div>
+              <div class="criterion"><div class="check"></div><div>การสร้าง User ตรวจ <code>plan.maxUsers</code> — ถ้าเกินคืน 400</div></div>
+              <div class="criterion"><div class="check"></div><div>User มี role: ADMIN, SALE_LEAD, SALE</div></div>
+              <div class="criterion"><div class="check"></div><div>Sale สังกัดสาขาเดียว (<code>branchId</code> required สำหรับ role SALE)</div></div>
+              <div class="criterion"><div class="check"></div><div>Sale Lead ไม่ผูกกับสาขาเดียว (สามารถดูหลายสาขาได้)</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant app มีหน้า: Branches list/form, Users list/form</div></div>
+              <div class="criterion"><div class="check"></div><div>ทุก query inject <code>tenantId</code> อัตโนมัติจาก JWT — ไม่สามารถเข้าถึงข้อมูล tenant อื่นได้</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #04 -->
+      <div class="issue-card" id="issue-04">
+        <div class="issue-header">
+          <div class="issue-num">04</div>
+          <div class="issue-meta">
+            <h2>Products + Stock</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #03</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>Admin จัดการสินค้าพร้อมราคา 5 ประเภทและจัดการ stock แต่ละสาขา Stock ลดอัตโนมัติเมื่อ approve เงินดาวน์ และคืนอัตโนมัติเมื่อยกเลิกสัญญา (side effects อยู่ใน Issue #06)</p>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div><code>GET/POST/PATCH/DELETE /api/products</code> — CRUD สินค้า</div></div>
+              <div class="criterion"><div class="check"></div><div>Product มีฟิลด์: <code>cashPrice</code>, <code>downPayment</code>, <code>dailyPrice</code>, <code>weeklyPrice</code>, <code>monthlyPrice</code>, <code>isActive</code></div></div>
+              <div class="criterion"><div class="check"></div><div>ทุก price field เป็น Decimal (ไม่ใช่ Float) ใน Prisma schema</div></div>
+              <div class="criterion"><div class="check"></div><div><code>GET /api/branches/:id/stock</code> — ดู stock ทุกสินค้าของสาขา</div></div>
+              <div class="criterion"><div class="check"></div><div><code>POST /api/branches/:id/stock/set</code> — ตั้ง stock (Admin/Sale Lead)</div></div>
+              <div class="criterion"><div class="check"></div><div><code>PATCH /api/branches/:id/stock/adjust</code> — ปรับ stock +/- (Admin/Sale Lead)</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant app หน้า Products: แสดงและแก้ไขสินค้าพร้อม <strong>ราคาทั้ง 5 ประเภท</strong> และเงินดาวน์</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant app หน้า Stock: ดูและปรับ stock แยกต่อสาขา</div></div>
+              <div class="criterion"><div class="check"></div><div>Product ที่ <code>isActive = false</code> ไม่ปรากฏในหน้าสร้างสัญญา</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #05 -->
+      <div class="issue-card" id="issue-05">
+        <div class="issue-header">
+          <div class="issue-num">05</div>
+          <div class="issue-meta">
+            <h2>Customers + Installment Contracts</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #04</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>Sale สร้างลูกค้าและสัญญาผ่อนชำระ ระบบคำนวณตารางงวดชำระอัตโนมัติและสร้าง Payment records ทั้งหมดใน transaction เดียว หลังสร้างสัญญา Sale <strong>พิมพ์เอกสารสัญญา</strong> ให้ลูกค้าเซ็น</p>
+          </div>
+          <div class="issue-section">
+            <h3>Schedule อัตโนมัติ</h3>
+            <div class="schedule-box">DAILY:   30 งวด × dailyPrice   + downPayment
+WEEKLY:  12 งวด × weeklyPrice  + downPayment
+MONTHLY: 12 งวด × monthlyPrice + downPayment
+CASH:     1 งวด × cashPrice    (ไม่มี downPayment แยก)</div>
+          </div>
+          <div class="issue-section">
+            <h3>เอกสารสัญญาผ่อนชำระ (Contract Document)</h3>
+            <table>
+              <tr><th>Section</th><th>ข้อมูล</th></tr>
+              <tr><td>หัวเรื่อง</td><td>ชื่อ Tenant, ชื่อสาขา, เลขสัญญา, วันที่ทำสัญญา</td></tr>
+              <tr><td>ข้อมูลลูกค้า</td><td>ชื่อ-นามสกุล, เบอร์โทร</td></tr>
+              <tr><td>รายละเอียดสินค้า</td><td>ชื่อสินค้า, ราคา, เงินดาวน์</td></tr>
+              <tr><td>เงื่อนไขผ่อน</td><td>ประเภท (รายวัน/สัปดาห์/เดือน), จำนวนงวด, ยอดต่องวด</td></tr>
+              <tr><td>ยอดรวม</td><td>ราคารวมทั้งสัญญา (downPayment + งวด × จำนวนงวด)</td></tr>
+              <tr><td>ตารางงวด</td><td>งวดที่, วันครบกำหนด, ยอดที่ต้องชำระ (ครบทุกงวด)</td></tr>
+              <tr><td>ลายเซ็น</td><td>ชื่อ Sale, ช่องเซ็นชื่อลูกค้า, ช่องเซ็นชื่อพยาน</td></tr>
+            </table>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div><code>GET/POST/PATCH /api/customers</code> — CRUD ลูกค้า</div></div>
+              <div class="criterion"><div class="check"></div><div><code>POST /api/customers/:id/suspend</code> และ <code>unsuspend</code> — ระงับ/คืนสิทธิ์ลูกค้า</div></div>
+              <div class="criterion"><div class="check"></div><div><code>PATCH /api/customers/:id/limit</code> — กำหนด contractLimit รายลูกค้า</div></div>
+              <div class="criterion"><div class="check"></div><div><code>GET/POST /api/contracts</code> — ดูรายการและสร้างสัญญา</div></div>
+              <div class="criterion"><div class="check"></div><div>CreateContractDto รับเพียง: <code>customerId</code>, <code>productId</code>, <code>branchId</code>, <code>paymentType</code></div></div>
+              <div class="criterion"><div class="check"></div><div>การสร้างสัญญาตรวจ: ลูกค้าไม่ถูก suspend, ไม่เกิน contractLimit, stock &gt; 0</div></div>
+              <div class="criterion"><div class="check"></div><div>สร้างสัญญา → สร้าง Payment งวดดาวน์ + Payment งวดถัดไปทั้งหมดใน 1 transaction</div></div>
+              <div class="criterion highlight"><div class="check"></div><div><code>GET /api/contracts/:id/document</code> — ดึงข้อมูลสัญญาพร้อมตารางงวดครบทุกงวด</div></div>
+              <div class="criterion"><div class="check"></div><div><code>DELETE /api/contracts/:id/cancel</code> — ยกเลิกสัญญา (Admin เท่านั้น)</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant app หน้า Customers: list, สร้าง, suspend, กำหนด limit</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant app หน้า Contracts: list พร้อม filter status, สร้างสัญญา</div></div>
+              <div class="criterion highlight"><div class="check"></div><div>Tenant app: หลังสร้างสัญญาสำเร็จ — แสดงเอกสารสัญญาและมีปุ่ม "พิมพ์สัญญา" (browser print) ทันที</div></div>
+              <div class="criterion highlight"><div class="check"></div><div>Tenant app Contract detail: ปุ่ม "พิมพ์สัญญา" เปิดใช้งานได้ตลอดอายุสัญญา</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #06 -->
+      <div class="issue-card" id="issue-06">
+        <div class="issue-header">
+          <div class="issue-num">06</div>
+          <div class="issue-meta">
+            <h2>Payments + Commission Calculation</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #05</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>Sale บันทึกการรับเงินสดหรือ approve สลิปโอนเงิน เมื่อ approve payment ระบบทำ side effects อัตโนมัติ: ลด stock (กรณีเงินดาวน์), คำนวณ commission, mark contract status และ <strong>ออกใบเสร็จรับเงินทุกครั้ง</strong></p>
+          </div>
+          <div class="two-col">
+            <div class="issue-section">
+              <h3>Commission Formula (ADR-0002)</h3>
+              <div class="schedule-box" style="font-size:12px">Sale:      amount × installmentRate
+           (หรือ cashRate ถ้า CASH)
+SaleLead:  amount × overrideRate
+           (จากทุก Sale ในทีม)</div>
+            </div>
+            <div class="issue-section">
+              <h3>ใบเสร็จรับเงิน (Receipt)</h3>
+              <table>
+                <tr><th>Field</th><th>ค่า</th></tr>
+                <tr><td>เลขที่</td><td><code>REC-YYYYMMDD-00001</code></td></tr>
+                <tr><td>วันที่</td><td>approvedAt</td></tr>
+                <tr><td>ลูกค้า</td><td>customer.name</td></tr>
+                <tr><td>เลขสัญญา</td><td>contractNumber</td></tr>
+                <tr><td>งวดที่</td><td>installmentNo</td></tr>
+                <tr><td>จำนวนเงิน</td><td>amount</td></tr>
+                <tr><td>วิธีชำระ</td><td>CASH / TRANSFER</td></tr>
+                <tr><td>Sale / สาขา</td><td>user / branch</td></tr>
+              </table>
+            </div>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div><code>GET /api/payments</code> — ดูรายการ payment พร้อม filter (contractId, status)</div></div>
+              <div class="criterion"><div class="check"></div><div><code>POST /api/payments/cash</code> — รับ <code>paymentId</code> เดียว → approve ทันที</div></div>
+              <div class="criterion"><div class="check"></div><div><code>POST /api/payments/slip</code> — รับ <code>paymentId</code> + <code>slipImageUrl</code> → สถานะรอ approve</div></div>
+              <div class="criterion"><div class="check"></div><div><code>PATCH /api/payments/:id/approve</code> — approve สลิป</div></div>
+              <div class="criterion"><div class="check"></div><div><code>PATCH /api/payments/:id/reject</code> — reject สลิป</div></div>
+              <div class="criterion"><div class="check"></div><div>เมื่อ approve เงินดาวน์: stock ลด 1, contract → ACTIVE, <code>downPaymentPaid = true</code></div></div>
+              <div class="criterion"><div class="check"></div><div>เมื่อ approve payment งวดสุดท้าย: contract → COMPLETED, <code>warrantyActive = true</code></div></div>
+              <div class="criterion"><div class="check"></div><div>Commission สร้างทันทีเมื่อ approve — ทั้ง Sale และ Sale Lead ใน 1 transaction</div></div>
+              <div class="criterion highlight"><div class="check"></div><div><code>GET /api/payments/:id/receipt</code> — ดึงข้อมูลใบเสร็จของ payment ที่ approved</div></div>
+              <div class="criterion highlight"><div class="check"></div><div>ระบบสร้าง <code>receiptNumber</code> อัตโนมัติรูปแบบ <code>REC-YYYYMMDD-00001</code> เมื่อ approve</div></div>
+              <div class="criterion highlight"><div class="check"></div><div>Receipt มีข้อมูลครบ 8 fields ตามตาราง</div></div>
+              <div class="criterion"><div class="check"></div><div><code>GET /api/commissions</code> — Sale เห็นของตัวเอง, Admin เห็นทั้งหมด</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant app หน้า Payments: pending list, ปุ่ม "รับเงินสด", ปุ่ม approve/reject สลิป</div></div>
+              <div class="criterion highlight"><div class="check"></div><div>Tenant app: หลัง approve — แสดงใบเสร็จและมีปุ่ม "พิมพ์ใบเสร็จ" (browser print)</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant app หน้า Commissions: รายการ commission พร้อมยอดรวม</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #07 -->
+      <div class="issue-card" id="issue-07">
+        <div class="issue-header">
+          <div class="issue-num">07</div>
+          <div class="issue-meta">
+            <h2>Dashboard KPI (Role-based)</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #06</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>Dashboard หน้าแรกแสดงตัวเลขจริงตาม role ของผู้ใช้ ไม่ใช่แค่ shortcut links</p>
+          </div>
+          <div class="issue-section">
+            <h3>KPI ตาม Role</h3>
+            <table>
+              <tr><th>Role</th><th>KPI ที่เห็น</th></tr>
+              <tr><td>Admin</td><td>ยอดขายรวมทุกสาขา, commission รวม, สัญญาค้างชำระ, stock ต่ำ</td></tr>
+              <tr><td>Sale Lead</td><td>ยอดทีม, commission ตัวเองและ Sale ในทีม, ลูกค้าค้างชำระของสาขา</td></tr>
+              <tr><td>Sale</td><td>สัญญาของตัวเอง, commission ตัวเอง, งวดที่ต้องเก็บวันนี้</td></tr>
+            </table>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div><code>GET /api/dashboard</code> — คืน KPI object ตาม role ของ JWT</div></div>
+              <div class="criterion"><div class="check"></div><div>Admin KPI: totalRevenue (30 วันล่าสุด), totalCommission, overdueContracts count, lowStockBranches</div></div>
+              <div class="criterion"><div class="check"></div><div>Sale Lead KPI: teamRevenue, ownCommission, teamCommission, overdueCustomers ในสาขาที่ดูแล</div></div>
+              <div class="criterion"><div class="check"></div><div>Sale KPI: myContracts count, myCommission, paymentsCollectToday count</div></div>
+              <div class="criterion"><div class="check"></div><div>Tenant app DashboardPage แสดง KPI cards จาก API จริง (ไม่ใช่ placeholder)</div></div>
+              <div class="criterion"><div class="check"></div><div>KPI cards แสดงยอดเงินเป็น locale format (฿1,234,567)</div></div>
+              <div class="criterion"><div class="check"></div><div>Loading state ระหว่างดึงข้อมูล</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #08 -->
+      <div class="issue-card" id="issue-08">
+        <div class="issue-header">
+          <div class="issue-num">08</div>
+          <div class="issue-meta">
+            <h2>Background Jobs: Late Fee + LINE Notification</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #06</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>Background jobs ที่ทำงานอัตโนมัติผ่าน Bull + Redis:<br>
+            <strong>1. Late Fee job</strong>: คิดค่าปรับและ mark สัญญาเป็น DEFAULTED เมื่อค้างชำระเกิน threshold<br>
+            <strong>2. Notification job</strong>: ส่งแจ้งเตือนผ่าน LINE Messaging API เมื่อใกล้ครบกำหนดและเมื่อปิดสัญญา</p>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div>Late Fee job ทำงานทุกวัน (cron: <code>0 8 * * *</code>)</div></div>
+              <div class="criterion"><div class="check"></div><div>Late Fee job หา payment ที่ <code>status = PENDING</code> และ <code>dueDate &lt; today - threshold</code></div></div>
+              <div class="criterion"><div class="check"></div><div>Late Fee job สร้าง LateFee record สำหรับแต่ละ payment ที่เกินกำหนด</div></div>
+              <div class="criterion"><div class="check"></div><div>Late Fee job mark contract เป็น DEFAULTED และ suspend customer เมื่อค้างเกิน <code>tenant.defaultThreshold</code> วัน</div></div>
+              <div class="criterion"><div class="check"></div><div>Notification job ส่งแจ้งเตือนล่วงหน้า 1 วันก่อนครบกำหนดชำระ (ถ้ามี LINE userId)</div></div>
+              <div class="criterion"><div class="check"></div><div>Notification job ส่งใบปิดหนี้ผ่าน LINE เมื่อ contract status เปลี่ยนเป็น COMPLETED</div></div>
+              <div class="criterion"><div class="check"></div><div>Job ทั้งสองมี error handling — ถ้า LINE API ล้มเหลว ไม่ affect database transaction</div></div>
+              <div class="criterion"><div class="check"></div><div>ถ้าไม่มี <code>LINE_CHANNEL_ACCESS_TOKEN</code> ใน env → notification job log warning แล้วข้ามโดยไม่ throw</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #09 -->
+      <div class="issue-card" id="issue-09">
+        <div class="issue-header">
+          <div class="issue-num hitl">09</div>
+          <div class="issue-meta">
+            <h2>LINE LIFF: Architecture Decision</h2>
+            <div class="tags">
+              <span class="badge badge-hitl">⚠ HITL — ต้องการการตัดสินใจ</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>ประเด็นที่ต้องตัดสินใจก่อน implement</h3>
+            <div class="decision-box">
+              <p><strong>1. LIFF app อยู่ที่ไหน?</strong></p>
+              <div class="decision-options">
+                <div class="decision-option"><strong>Option A</strong>แยก repo — ขนาดเล็ก deploy ง่าย แต่ share type กันยาก</div>
+                <div class="decision-option"><strong>Option B</strong>อยู่ใน monorepo เป็น <code>apps/liff</code> — share type กับ api ได้ แต่ monorepo ใหญ่ขึ้น</div>
+              </div>
+            </div>
+            <div class="decision-box" style="margin-top:12px">
+              <p><strong>2. Customer auth flow</strong></p>
+              <div class="decision-options">
+                <div class="decision-option"><strong>Option A</strong>Sale สร้าง customer แล้วให้ลูกค้า activate เองผ่าน LIFF (link by phone)</div>
+                <div class="decision-option"><strong>Option B</strong>ส่ง invite link ให้ลูกค้าผ่าน LINE → activate ด้วย OTP</div>
+              </div>
+            </div>
+            <div class="decision-box" style="margin-top:12px">
+              <p><strong>3. Slip image storage</strong></p>
+              <div class="decision-options">
+                <div class="decision-option"><strong>Option A</strong>Upload ไปยัง LINE Content API แล้วเก็บ URL</div>
+                <div class="decision-option"><strong>Option B</strong>Upload ไปยัง storage (S3/GCS) แล้วเก็บ URL ใน <code>payment.slipImageUrl</code></div>
+              </div>
+            </div>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div>ทีมตัดสินใจ LIFF app structure (separate หรือ monorepo)</div></div>
+              <div class="criterion"><div class="check"></div><div>ทีมตัดสินใจ customer activation flow</div></div>
+              <div class="criterion"><div class="check"></div><div>ทีมตัดสินใจ slip image storage</div></div>
+              <div class="criterion"><div class="check"></div><div>สร้าง LINE LIFF app ใน LINE Developers Console และมี <code>LIFF_ID</code></div></div>
+              <div class="criterion"><div class="check"></div><div>มี <code>LINE_CHANNEL_ACCESS_TOKEN</code> และ <code>LINE_CHANNEL_SECRET</code> พร้อมใช้</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #10 -->
+      <div class="issue-card" id="issue-10">
+        <div class="issue-header">
+          <div class="issue-num">10</div>
+          <div class="issue-meta">
+            <h2>LINE LIFF: Customer Channel Implementation</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #09, #06</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>LIFF app สำหรับลูกค้า เปิดใน LINE app ได้โดยตรง ไม่ต้องติดตั้ง app เพิ่ม ลูกค้าดูสัญญา งวดชำระ ประวัติ และส่งสลิปได้</p>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div>ลูกค้าเปิด LIFF link ใน LINE → login ด้วย LINE account อัตโนมัติ (LIFF SDK handle)</div></div>
+              <div class="criterion"><div class="check"></div><div>หน้า "สัญญาของฉัน" — แสดงสัญญาผ่อนทั้งหมดของลูกค้า พร้อมสถานะ</div></div>
+              <div class="criterion"><div class="check"></div><div>หน้า "งวดชำระ" — แสดงงวดที่ยังไม่ได้ชำระ วันครบกำหนด และงวดที่ชำระแล้ว</div></div>
+              <div class="criterion"><div class="check"></div><div>หน้า "ส่งสลิป" — อัปโหลดรูปสลิป → call <code>POST /api/payments/slip</code></div></div>
+              <div class="criterion"><div class="check"></div><div>API endpoint <code>POST /api/auth/liff</code> รับ <code>lineUserId</code> → คืน JWT สำหรับ customer</div></div>
+              <div class="criterion"><div class="check"></div><div>Customer record มี <code>lineUserId</code> field สำหรับ link กับ LINE account</div></div>
+              <div class="criterion"><div class="check"></div><div>ลูกค้าที่ยังไม่ activate เห็นหน้า onboarding พร้อมคำแนะนำ</div></div>
+              <div class="criterion"><div class="check"></div><div>UI รองรับ mobile screen (375px) เป็นหลัก</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- #11 -->
+      <div class="issue-card" id="issue-11">
+        <div class="issue-header">
+          <div class="issue-num">11</div>
+          <div class="issue-meta">
+            <h2>Unit + Integration Tests (Business Logic)</h2>
+            <div class="tags">
+              <span class="badge badge-afk">AFK</span>
+              <span class="badge badge-blocked">Blocked by #05</span>
+              <span class="badge badge-parallel">Parallel กับ #05–07</span>
+            </div>
+          </div>
+        </div>
+        <div class="issue-body">
+          <div class="issue-section">
+            <h3>What to build</h3>
+            <p>Test suite สำหรับ business logic ที่ซับซ้อนที่สุดในระบบ ทดสอบ external behavior เท่านั้น ไม่ใช่ implementation details</p>
+          </div>
+          <div class="two-col">
+            <div class="issue-section">
+              <h3>Unit Tests (Jest)</h3>
+              <table>
+                <tr><th>Module</th><th>สิ่งที่ทดสอบ</th></tr>
+                <tr><td>ContractsService</td><td>buildSchedule ครบ 4 ประเภท</td></tr>
+                <tr><td>ContractsService</td><td>ล้มเหลวถ้า stock = 0</td></tr>
+                <tr><td>ContractsService</td><td>ล้มเหลวถ้า customer suspend / เกิน limit</td></tr>
+                <tr><td>CommissionsService</td><td>Sale + Sale Lead rate ถูกต้อง</td></tr>
+                <tr><td>PaymentsService</td><td>approve down → stock ลด, ACTIVE</td></tr>
+                <tr><td>PaymentsService</td><td>approve ล่าสุด → COMPLETED</td></tr>
+                <tr><td>StockService</td><td>decrement / increment</td></tr>
+              </table>
+            </div>
+            <div class="issue-section">
+              <h3>Integration Tests (Supertest)</h3>
+              <table>
+                <tr><th>Scenario</th><th>ผลคาดหวัง</th></tr>
+                <tr><td>POST /auth/login (valid)</td><td>200 + JWT</td></tr>
+                <tr><td>POST /auth/login (wrong)</td><td>401</td></tr>
+                <tr><td>POST /contracts (no stock)</td><td>400</td></tr>
+                <tr><td>cash → GET /contracts/:id</td><td>ACTIVE</td></tr>
+                <tr><td>subscription หมดอายุ</td><td>403 ทุก endpoint</td></tr>
+                <tr><td>Platform token → Tenant</td><td>401</td></tr>
+              </table>
+            </div>
+          </div>
+          <div class="issue-section">
+            <h3>Acceptance Criteria</h3>
+            <div class="criteria">
+              <div class="criterion"><div class="check"></div><div><code>pnpm test</code> รัน unit tests ทั้งหมดผ่าน</div></div>
+              <div class="criterion"><div class="check"></div><div><code>pnpm test:e2e</code> รัน integration tests ผ่าน (ต้องใช้ test database แยก)</div></div>
+              <div class="criterion"><div class="check"></div><div>Coverage ≥ 80% สำหรับ ContractsService, PaymentsService, CommissionsService</div></div>
+              <div class="criterion"><div class="check"></div><div>ไม่มี test ที่ทดสอบ private method โดยตรง — ทดสอบผ่าน public interface เท่านั้น</div></div>
+              <div class="criterion"><div class="check"></div><div>Integration tests ใช้ transaction rollback หรือ truncate table ระหว่าง test cases</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /issues-list -->
+  </main>
+</div>
+
+<script>
+  const sections = document.querySelectorAll('.issue-card[id]');
+  const navLinks = document.querySelectorAll('nav a[href^="#"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const id = e.target.id.replace('issue-', '');
+        const active = document.querySelector(`nav a[href="#issue-${id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.2 });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
