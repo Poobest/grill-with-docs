@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRD — ระบบบริหารจัดการสินเชื่อผ่อนชำระ v1</title>
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --muted: #718096;
+      --primary: #3b82f6;
+      --primary-light: #eff6ff;
+
+      --role-platform: #7c3aed;
+      --role-platform-bg: #f5f3ff;
+      --role-admin: #0369a1;
+      --role-admin-bg: #e0f2fe;
+      --role-lead: #b45309;
+      --role-lead-bg: #fffbeb;
+      --role-sale: #059669;
+      --role-sale-bg: #ecfdf5;
+      --role-customer: #db2777;
+      --role-customer-bg: #fdf2f8;
+      --role-system: #475569;
+      --role-system-bg: #f1f5f9;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', 'Noto Sans Thai', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ─── Layout ─── */
+    .layout { display: flex; min-height: 100vh; }
+
+    nav {
+      width: 260px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 24px 0;
+    }
+
+    nav .logo {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    nav .logo .badge {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    nav .logo h2 { font-size: 13px; color: var(--text); font-weight: 700; line-height: 1.4; }
+    nav .logo span { font-size: 12px; color: var(--muted); }
+
+    nav ul { list-style: none; }
+    nav li a {
+      display: block;
+      padding: 7px 20px;
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    nav li a:hover,
+    nav li a.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      border-left-color: var(--primary);
+    }
+    nav .section-label {
+      padding: 12px 20px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+
+    main {
+      flex: 1;
+      padding: 40px 48px;
+      max-width: 960px;
+    }
+
+    /* ─── Header ─── */
+    .prd-header {
+      margin-bottom: 40px;
+      padding-bottom: 28px;
+      border-bottom: 2px solid var(--border);
+    }
+    .prd-header .meta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .prd-header .meta .tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+      letter-spacing: 0.3px;
+    }
+    .tag-prd { background: var(--primary); color: #fff; }
+    .tag-v1 { background: #dcfce7; color: #166534; }
+    .tag-date { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+    .prd-header h1 { font-size: 28px; font-weight: 800; line-height: 1.3; color: var(--text); }
+    .prd-header p { margin-top: 10px; color: var(--muted); font-size: 15px; }
+
+    /* ─── Sections ─── */
+    section { margin-bottom: 52px; scroll-margin-top: 24px; }
+    section > h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    section > h2 .icon { font-size: 22px; }
+
+    /* ─── Problem / Solution ─── */
+    .callout {
+      background: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      font-size: 15px;
+      color: var(--text);
+      line-height: 1.8;
+    }
+    .solution-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .solution-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .solution-card .role-tag {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .solution-card p { font-size: 13px; color: var(--muted); }
+
+    /* ─── User Stories ─── */
+    .role-group { margin-bottom: 32px; }
+    .role-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .role-header .role-badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 14px;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+    .role-header .count {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .role-platform .role-badge { background: var(--role-platform-bg); color: var(--role-platform); }
+    .role-admin .role-badge    { background: var(--role-admin-bg); color: var(--role-admin); }
+    .role-lead .role-badge     { background: var(--role-lead-bg); color: var(--role-lead); }
+    .role-sale .role-badge     { background: var(--role-sale-bg); color: var(--role-sale); }
+    .role-customer .role-badge { background: var(--role-customer-bg); color: var(--role-customer); }
+    .role-system .role-badge   { background: var(--role-system-bg); color: var(--role-system); }
+
+    .story-list { display: flex; flex-direction: column; gap: 8px; }
+    .story {
+      display: flex;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      align-items: flex-start;
+      transition: box-shadow 0.15s;
+    }
+    .story:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .story .num {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .role-platform .num { background: var(--role-platform-bg); color: var(--role-platform); }
+    .role-admin .num    { background: var(--role-admin-bg); color: var(--role-admin); }
+    .role-lead .num     { background: var(--role-lead-bg); color: var(--role-lead); }
+    .role-sale .num     { background: var(--role-sale-bg); color: var(--role-sale); }
+    .role-customer .num { background: var(--role-customer-bg); color: var(--role-customer); }
+    .role-system .num   { background: var(--role-system-bg); color: var(--role-system); }
+
+    .story .body { flex: 1; font-size: 14px; line-height: 1.65; }
+    .story .body .as { font-weight: 700; }
+    .story .body .goal { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .story.highlight { border-left: 3px solid var(--primary); }
+
+    /* ─── Tables ─── */
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 12px; }
+    th {
+      background: var(--bg);
+      font-weight: 700;
+      padding: 9px 14px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg); }
+    .badge-done { background: #dcfce7; color: #166534; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+    .badge-draft { background: #fef9c3; color: #854d0e; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; background: #f1f5f9; padding: 1px 5px; border-radius: 4px; color: #1e40af; }
+    pre { background: #0f172a; color: #e2e8f0; padding: 16px 20px; border-radius: 10px; overflow-x: auto; font-size: 13px; line-height: 1.8; margin-top: 12px; }
+    pre code { background: none; color: inherit; padding: 0; font-size: 13px; }
+
+    /* ─── Document cards ─── */
+    .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+    .doc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .doc-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .doc-card .doc-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .doc-card table { margin-top: 8px; }
+    .doc-card th { font-size: 11px; }
+    .doc-card td { font-size: 12px; }
+
+    /* ─── OOS ─── */
+    .oos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+    .oos-item {
+      background: #fff5f5;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+    }
+    .oos-item strong { display: block; color: #991b1b; margin-bottom: 2px; font-size: 13px; }
+    .oos-item span { color: var(--muted); font-size: 12px; }
+
+    /* ─── ADR ─── */
+    .adr-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .adr {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .adr .adr-num {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 3px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+    .adr .adr-body p { font-size: 14px; }
+    .adr .adr-body .rationale { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+    /* ─── Print ─── */
+    @media print {
+      nav { display: none; }
+      main { padding: 24px; max-width: none; }
+      .story:hover { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <nav>
+    <div class="logo">
+      <div class="badge">PRD</div>
+      <h2>Installment SaaS</h2>
+      <span>v1 · 2026-05-29</span>
+    </div>
+    <ul>
+      <li class="section-label">เนื้อหา</li>
+      <li><a href="#problem">ปัญหาและ Solution</a></li>
+      <li><a href="#stories">User Stories</a></li>
+      <li><a href="#documents">เอกสาร (ใบเสร็จ / สัญญา)</a></li>
+      <li><a href="#implementation">Implementation Decisions</a></li>
+      <li><a href="#schema">Database Schema</a></li>
+      <li><a href="#testing">Testing Plan</a></li>
+      <li><a href="#oos">Out of Scope</a></li>
+      <li><a href="#adr">ADR</a></li>
+    </ul>
+    <ul style="margin-top:16px">
+      <li class="section-label">Roles</li>
+      <li><a href="#platform">Platform Admin (6)</a></li>
+      <li><a href="#tenant-admin">Tenant Admin (11)</a></li>
+      <li><a href="#sale-lead">Sale Lead (3)</a></li>
+      <li><a href="#sale">Sale (8)</a></li>
+      <li><a href="#customer">Customer (7)</a></li>
+      <li><a href="#auto">ระบบอัตโนมัติ (5)</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── Main ── -->
+  <main>
+
+    <!-- Header -->
+    <div class="prd-header">
+      <div class="meta">
+        <span class="tag tag-prd">PRD</span>
+        <span class="tag tag-v1">v1</span>
+        <span class="tag tag-date">สร้างเมื่อ 2026-05-29 · อัปเดต 2026-05-30</span>
+      </div>
+      <h1>ระบบบริหารจัดการสินเชื่อผ่อนชำระ</h1>
+      <p>Multi-tenant SaaS สำหรับร้านค้าที่ขายสินค้าผ่อนชำระรายวัน/สัปดาห์/เดือน</p>
+    </div>
+
+    <!-- Problem & Solution -->
+    <section id="problem">
+      <h2><span class="icon">🎯</span> Problem Statement &amp; Solution</h2>
+      <div class="callout">
+        ร้านค้าขายสินค้าทนทาน (เช่น อิเล็กทรอนิกส์) ที่ให้ลูกค้าผ่อนชำระรายวัน/รายสัปดาห์/รายเดือน ยังไม่มีระบบดิจิทัลที่รองรับกระบวนการทั้งหมด
+        ตั้งแต่การสร้างสัญญาผ่อน การติดตามการชำระเงิน การคำนวณ commission ให้ Sale และการแจ้งเตือนลูกค้า
+        ร้านส่วนใหญ่ยังใช้ Excel หรือกระดาษบันทึก ทำให้เกิดข้อผิดพลาด ข้อมูลสูญหาย และไม่สามารถขยายสาขาได้อย่างมีประสิทธิภาพ
+      </div>
+      <div class="solution-grid" style="margin-top:20px">
+        <div class="solution-card">
+          <span class="role-tag" style="background:var(--role-platform-bg);color:var(--role-platform)">Platform Admin</span>
+          <p>จัดการ Tenant และ Subscription plan ทั้งหมด</p>
+        </div>
+        <div class="solution-card">
+          <span class="role-tag" style="background:var(--role-admin-bg);color:var(--role-admin)">Tenant Admin</span>
+          <p>จัดการร้านของตัวเอง ทั้ง Branch, User, Product, Stock</p>
+        </div>
+        <div class="solution-card">
+          <span class="role-tag" style="background:var(--role-sale-bg);color:var(--role-sale)">Sale Lead / Sale</span>
+          <p>สร้างสัญญา เก็บเงิน ออกใบเสร็จ รับ commission</p>
+        </div>
+        <div class="solution-card">
+          <span class="role-tag" style="background:var(--role-customer-bg);color:var(--role-customer)">Customer</span>
+          <p>ดูสัญญาผ่อนและชำระผ่าน LINE LIFF โดยไม่ต้องโหลด app</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- User Stories -->
+    <section id="stories">
+      <h2><span class="icon">📋</span> User Stories</h2>
+
+      <!-- Platform Admin -->
+      <div class="role-group role-platform" id="platform">
+        <div class="role-header">
+          <span class="role-badge">Platform Admin</span>
+          <span class="count">6 stories</span>
+        </div>
+        <div class="story-list">
+          <div class="story"><div class="num">1</div><div class="body"><span class="as">Platform Admin</span> ต้องการสร้าง Subscription Plan ที่กำหนดจำนวนสาขาสูงสุดและจำนวน user สูงสุดได้ <span class="goal">→ ให้ Tenant เลือก plan ที่เหมาะสมกับขนาดธุรกิจ</span></div></div>
+          <div class="story"><div class="num">2</div><div class="body"><span class="as">Platform Admin</span> ต้องการสร้าง Tenant ใหม่พร้อมกำหนด plan ได้ <span class="goal">→ onboard ร้านค้าใหม่เข้าสู่ระบบ</span></div></div>
+          <div class="story"><div class="num">3</div><div class="body"><span class="as">Platform Admin</span> ต้องการดูรายการ Tenant ทั้งหมด พร้อมสถานะ subscription และวันหมดอายุ <span class="goal">→ ติดตาม account ที่ใกล้หมดอายุ</span></div></div>
+          <div class="story"><div class="num">4</div><div class="body"><span class="as">Platform Admin</span> ต้องการ extend subscription ของ Tenant ด้วยตัวเองหลังยืนยันการโอนเงิน <span class="goal">→ เปิดการใช้งานต่อ</span></div></div>
+          <div class="story"><div class="num">5</div><div class="body"><span class="as">Platform Admin</span> ต้องการ lock Tenant ที่ subscription หมดอายุโดยอัตโนมัติ <span class="goal">→ ไม่ให้ใช้งานโดยไม่ชำระค่าบริการ</span></div></div>
+          <div class="story"><div class="num">6</div><div class="body"><span class="as">Platform Admin</span> ต้องการ login ผ่าน Platform app แยกต่างหากจาก Tenant app <span class="goal">→ แยก session และ permission อย่างชัดเจน</span></div></div>
+        </div>
+      </div>
+
+      <!-- Tenant Admin -->
+      <div class="role-group role-admin" id="tenant-admin">
+        <div class="role-header">
+          <span class="role-badge">Tenant Admin</span>
+          <span class="count">11 stories</span>
+        </div>
+        <div class="story-list">
+          <div class="story"><div class="num">7</div><div class="body"><span class="as">Tenant Admin</span> ต้องการสร้างสาขาใหม่ได้ภายในขีดจำกัดของ plan <span class="goal">→ ขยายธุรกิจ</span></div></div>
+          <div class="story"><div class="num">8</div><div class="body"><span class="as">Tenant Admin</span> ต้องการสร้าง User ใหม่ในระบบ พร้อมกำหนด role (Sale Lead / Sale) และสาขาที่สังกัด <span class="goal">→ ให้พนักงานเข้าถึงระบบได้</span></div></div>
+          <div class="story"><div class="num">9</div><div class="body"><span class="as">Tenant Admin</span> ต้องการเพิ่มสินค้าพร้อมกำหนดราคาแยกตามประเภท (เงินสด / รายวัน / รายสัปดาห์ / รายเดือน) และกำหนดเงินดาวน์ <span class="goal">→ ให้ Sale สร้างสัญญาได้ถูกต้อง</span></div></div>
+          <div class="story"><div class="num">10</div><div class="body"><span class="as">Tenant Admin</span> ต้องการกำหนด commission rate ให้ Sale แต่ละคนแยกระหว่างยอดผ่อนและยอดเงินสด <span class="goal">→ ให้ Sale มี incentive ติดตามหนี้</span></div></div>
+          <div class="story"><div class="num">11</div><div class="body"><span class="as">Tenant Admin</span> ต้องการกำหนด commission rate สำหรับ Sale Lead แบบ override commission <span class="goal">→ ให้ Sale Lead ดูแลทีมอย่างมีประสิทธิภาพ</span></div></div>
+          <div class="story"><div class="num">12</div><div class="body"><span class="as">Tenant Admin</span> ต้องการตั้ง stock สินค้าแต่ละสาขาได้ <span class="goal">→ ควบคุมปริมาณสินค้าคงเหลือ</span></div></div>
+          <div class="story"><div class="num">13</div><div class="body"><span class="as">Tenant Admin</span> ต้องการกำหนด contract limit ให้ลูกค้าแต่ละคน <span class="goal">→ ควบคุมความเสี่ยงในการให้สินเชื่อ</span></div></div>
+          <div class="story"><div class="num">14</div><div class="body"><span class="as">Tenant Admin</span> ต้องการ suspend ลูกค้าที่ค้างชำระ <span class="goal">→ ป้องกันการสร้างสัญญาใหม่จนกว่าจะชำระหนี้ครบ</span></div></div>
+          <div class="story"><div class="num">15</div><div class="body"><span class="as">Tenant Admin</span> ต้องการยกเลิกสัญญาผ่อนได้ พร้อมให้ระบบคืน stock อัตโนมัติ <span class="goal">→ จัดการกรณีพิเศษที่ Sale ทำไม่ได้</span></div></div>
+          <div class="story"><div class="num">16</div><div class="body"><span class="as">Tenant Admin</span> ต้องการดู dashboard ยอดขายรวมทุกสาขา commission ทั้งหมด stock ทุกสาขา และรายการลูกค้าค้างชำระ <span class="goal">→ ตัดสินใจเชิงธุรกิจได้รวดเร็ว</span></div></div>
+          <div class="story"><div class="num">17</div><div class="body"><span class="as">Tenant Admin</span> ต้องการดูรายงานแยกประเภทผ่อน daily/weekly/monthly <span class="goal">→ วิเคราะห์ portfolio สินเชื่อ</span></div></div>
+        </div>
+      </div>
+
+      <!-- Sale Lead -->
+      <div class="role-group role-lead" id="sale-lead">
+        <div class="role-header">
+          <span class="role-badge">Sale Lead</span>
+          <span class="count">3 stories</span>
+        </div>
+        <div class="story-list">
+          <div class="story"><div class="num">18</div><div class="body"><span class="as">Sale Lead</span> ต้องการดูยอดขายของทีมทั้งหมดในสาขาที่รับผิดชอบ <span class="goal">→ ติดตามผลงาน</span></div></div>
+          <div class="story"><div class="num">19</div><div class="body"><span class="as">Sale Lead</span> ต้องการดู commission ของตัวเองและของ Sale ในทีม <span class="goal">→ ตรวจสอบค่าตอบแทน</span></div></div>
+          <div class="story"><div class="num">20</div><div class="body"><span class="as">Sale Lead</span> ต้องการดูรายการลูกค้าที่ค้างชำระในสาขา <span class="goal">→ สั่งการให้ Sale ติดตาม</span></div></div>
+        </div>
+      </div>
+
+      <!-- Sale -->
+      <div class="role-group role-sale" id="sale">
+        <div class="role-header">
+          <span class="role-badge">Sale</span>
+          <span class="count">8 stories</span>
+        </div>
+        <div class="story-list">
+          <div class="story"><div class="num">21</div><div class="body"><span class="as">Sale</span> ต้องการสร้างข้อมูลลูกค้าใหม่ในระบบ <span class="goal">→ เริ่มกระบวนการสร้างสัญญา</span></div></div>
+          <div class="story"><div class="num">22</div><div class="body"><span class="as">Sale</span> ต้องการสร้างสัญญาผ่อนให้ลูกค้า โดยเลือกสินค้า ประเภทการผ่อน และให้ระบบคำนวณตารางชำระให้อัตโนมัติ <span class="goal">→ ลดข้อผิดพลาดในการคำนวณ</span></div></div>
+          <div class="story highlight"><div class="num">23</div><div class="body"><span class="as">Sale</span> ต้องการ<strong>พิมพ์เอกสารสัญญาผ่อนชำระพร้อมตารางงวดทั้งหมด</strong>หลังสร้างสัญญา <span class="goal">→ ให้ลูกค้าเซ็นรับทราบเงื่อนไขก่อนรับสินค้า</span></div></div>
+          <div class="story"><div class="num">24</div><div class="body"><span class="as">Sale</span> ต้องการบันทึกการรับเงินสดจากลูกค้าสำหรับงวดที่ระบุ <span class="goal">→ ให้ระบบ approve payment และคำนวณ commission ให้ทันที</span></div></div>
+          <div class="story highlight"><div class="num">25</div><div class="body"><span class="as">Sale</span> ต้องการ<strong>ออกใบเสร็จรับเงินให้ลูกค้าทันที</strong>หลัง approve การชำระเงินสดที่สาขา <span class="goal">→ ให้ลูกค้ามีหลักฐานการชำระที่ถูกต้อง</span></div></div>
+          <div class="story"><div class="num">26</div><div class="body"><span class="as">Sale</span> ต้องการ approve หรือ reject สลิปโอนเงินที่ลูกค้าส่งมาผ่าน LINE <span class="goal">→ ยืนยันการชำระเงิน</span></div></div>
+          <div class="story"><div class="num">27</div><div class="body"><span class="as">Sale</span> ต้องการดูรายการลูกค้าที่ต้องเก็บเงินวันนี้ <span class="goal">→ วางแผนการทำงานประจำวัน</span></div></div>
+          <div class="story"><div class="num">28</div><div class="body"><span class="as">Sale</span> ต้องการดู commission ของตัวเองทั้งหมด <span class="goal">→ ตรวจสอบค่าตอบแทนที่ได้รับ</span></div></div>
+          <div class="story"><div class="num">29</div><div class="body"><span class="as">Sale</span> ต้องการดูสัญญาที่สร้างเองทั้งหมด พร้อมสถานะ <span class="goal">→ ติดตามลูกค้าในมือ</span></div></div>
+        </div>
+      </div>
+
+      <!-- Customer -->
+      <div class="role-group role-customer" id="customer">
+        <div class="role-header">
+          <span class="role-badge">Customer</span>
+          <span class="count">7 stories</span>
+        </div>
+        <div class="story-list">
+          <div class="story"><div class="num">30</div><div class="body"><span class="as">Customer</span> ต้องการดูสัญญาผ่อนทั้งหมดของฉันผ่าน LINE LIFF โดยไม่ต้องติดตั้ง app <span class="goal">→ ตรวจสอบยอดหนี้ได้สะดวก</span></div></div>
+          <div class="story"><div class="num">31</div><div class="body"><span class="as">Customer</span> ต้องการดูงวดที่ยังไม่ได้ชำระและวันครบกำหนด <span class="goal">→ ไม่ให้เกินกำหนดจนเสียค่าปรับ</span></div></div>
+          <div class="story"><div class="num">32</div><div class="body"><span class="as">Customer</span> ต้องการส่งสลิปโอนเงินผ่าน LINE LIFF <span class="goal">→ รายงานการชำระเงินโดยไม่ต้องมาที่ร้าน</span></div></div>
+          <div class="story highlight"><div class="num">33</div><div class="body"><span class="as">Customer</span> ต้องการ<strong>รับสำเนาสัญญาผ่อนชำระพร้อมตารางงวดทั้งหมด</strong> <span class="goal">→ ทราบภาระผูกพันและวันครบกำหนดแต่ละงวด</span></div></div>
+          <div class="story highlight"><div class="num">34</div><div class="body"><span class="as">Customer</span> ต้องการ<strong>จ่ายเงินสดที่สาขาและรับใบเสร็จรับเงินทันที</strong> <span class="goal">→ มีหลักฐานการชำระเงินที่ตรวจสอบได้</span></div></div>
+          <div class="story"><div class="num">35</div><div class="body"><span class="as">Customer</span> ต้องการดูประวัติการชำระเงินทั้งหมดของสัญญา <span class="goal">→ ตรวจสอบยอดที่จ่ายไปแล้ว</span></div></div>
+          <div class="story"><div class="num">36</div><div class="body"><span class="as">Customer</span> ต้องการรับการแจ้งเตือนผ่าน LINE เมื่อใกล้ถึงวันครบกำหนดชำระ <span class="goal">→ เตรียมเงินได้ทันเวลา</span></div></div>
+          <div class="story"><div class="num">37</div><div class="body"><span class="as">Customer</span> ต้องการรับใบปิดหนี้ผ่าน LINE เมื่อชำระครบทุกงวด <span class="goal">→ เป็นหลักฐานว่าสัญญาเสร็จสิ้น</span></div></div>
+        </div>
+      </div>
+
+      <!-- System -->
+      <div class="role-group role-system" id="auto">
+        <div class="role-header">
+          <span class="role-badge">ระบบอัตโนมัติ</span>
+          <span class="count">5 stories</span>
+        </div>
+        <div class="story-list">
+          <div class="story"><div class="num">38</div><div class="body"><span class="as">ระบบ</span> ต้องการคำนวณค่าปรับ (Late Fee) อัตโนมัติเมื่อลูกค้าค้างชำระเกิน threshold ที่ Admin กำหนด <span class="goal">→ ลดภาระ manual ของ Sale</span></div></div>
+          <div class="story"><div class="num">39</div><div class="body"><span class="as">ระบบ</span> ต้องการ mark สัญญาเป็น Defaulted อัตโนมัติเมื่อค้างชำระเกิน threshold <span class="goal">→ ระงับการสร้างสัญญาใหม่</span></div></div>
+          <div class="story"><div class="num">40</div><div class="body"><span class="as">ระบบ</span> ต้องการ mark สัญญาเป็น Completed อัตโนมัติเมื่อ payment งวดสุดท้ายถูก approve <span class="goal">→ ไม่ต้องให้ Admin ปิดสัญญาด้วยตัวเอง</span></div></div>
+          <div class="story"><div class="num">41</div><div class="body"><span class="as">ระบบ</span> ต้องการลด stock อัตโนมัติเมื่อ approve เงินดาวน์ และคืน stock อัตโนมัติเมื่อยกเลิกสัญญา <span class="goal">→ ให้ stock ตรงกับความเป็นจริงเสมอ</span></div></div>
+          <div class="story"><div class="num">42</div><div class="body"><span class="as">ระบบ</span> ต้องการ lock Tenant ที่ subscription หมดอายุผ่าน middleware <span class="goal">→ ป้องกันการใช้งานโดยไม่ชำระค่าบริการ</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Documents -->
+    <section id="documents">
+      <h2><span class="icon">🖨️</span> เอกสารที่ระบบต้องออกได้</h2>
+      <div class="doc-grid">
+
+        <div class="doc-card">
+          <div class="doc-label">สำหรับ Issue #05</div>
+          <h4>📄 เอกสารสัญญาผ่อนชำระ</h4>
+          <p style="font-size:13px;color:var(--muted);margin-top:4px">ออกหลังสร้างสัญญา — ลูกค้าเซ็นรับก่อนรับสินค้า</p>
+          <table>
+            <tr><th>Section</th><th>ข้อมูล</th></tr>
+            <tr><td>หัวเรื่อง</td><td>ชื่อ Tenant, สาขา, เลขสัญญา, วันที่</td></tr>
+            <tr><td>ลูกค้า</td><td>ชื่อ-นามสกุล, เบอร์โทร</td></tr>
+            <tr><td>สินค้า</td><td>ชื่อสินค้า, ราคา, เงินดาวน์</td></tr>
+            <tr><td>เงื่อนไข</td><td>ประเภทผ่อน, จำนวนงวด, ยอดต่องวด</td></tr>
+            <tr><td>ยอดรวม</td><td>ราคารวมทั้งสัญญา</td></tr>
+            <tr><td>ตารางงวด</td><td>งวดที่, วันครบกำหนด, ยอดชำระ (ครบทุกงวด)</td></tr>
+            <tr><td>ลายเซ็น</td><td>Sale, ลูกค้า, พยาน</td></tr>
+          </table>
+        </div>
+
+        <div class="doc-card">
+          <div class="doc-label">สำหรับ Issue #06</div>
+          <h4>🧾 ใบเสร็จรับเงิน</h4>
+          <p style="font-size:13px;color:var(--muted);margin-top:4px">ออกทุกครั้งที่ payment ถูก approve — ทั้งเงินสดและโอน</p>
+          <table>
+            <tr><th>Field</th><th>ค่า</th></tr>
+            <tr><td>เลขที่</td><td><code>REC-YYYYMMDD-00001</code></td></tr>
+            <tr><td>วันที่</td><td>approvedAt</td></tr>
+            <tr><td>ลูกค้า</td><td>customer.name</td></tr>
+            <tr><td>เลขสัญญา</td><td>contract.contractNumber</td></tr>
+            <tr><td>งวดที่</td><td>payment.installmentNo</td></tr>
+            <tr><td>จำนวนเงิน</td><td>payment.amount</td></tr>
+            <tr><td>วิธีชำระ</td><td>CASH / TRANSFER</td></tr>
+            <tr><td>Sale / สาขา</td><td>user.name / branch.name</td></tr>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Implementation Decisions -->
+    <section id="implementation">
+      <h2><span class="icon">⚙️</span> Implementation Decisions</h2>
+
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;margin-top:20px">Backend Modules (NestJS)</h3>
+      <table>
+        <tr><th>Module</th><th>สถานะ</th><th>หมายเหตุ</th></tr>
+        <tr><td>Auth (Tenant + Platform)</td><td><span class="badge-done">สมบูรณ์</span></td><td>JWT dual-secret</td></tr>
+        <tr><td>Platform Plans</td><td><span class="badge-done">สมบูรณ์</span></td><td>CRUD</td></tr>
+        <tr><td>Platform Tenants</td><td><span class="badge-done">สมบูรณ์</span></td><td>CRUD + subscription extend</td></tr>
+        <tr><td>Branches</td><td><span class="badge-done">สมบูรณ์</span></td><td>CRUD</td></tr>
+        <tr><td>Users</td><td><span class="badge-done">สมบูรณ์</span></td><td>CRUD + role management</td></tr>
+        <tr><td>Products</td><td><span class="badge-done">สมบูรณ์</span></td><td>5 price fields: cashPrice, downPayment, dailyPrice, weeklyPrice, monthlyPrice</td></tr>
+        <tr><td>Stock</td><td><span class="badge-done">สมบูรณ์</span></td><td>set / adjust / decrement-on-down-payment / increment-on-cancel</td></tr>
+        <tr><td>Customers</td><td><span class="badge-done">สมบูรณ์</span></td><td>suspend / unsuspend / set contract limit</td></tr>
+        <tr><td>Contracts</td><td><span class="badge-done">สมบูรณ์</span></td><td>create ด้วย transaction (contract + schedule), cancel, <strong>document endpoint</strong></td></tr>
+        <tr><td>Payments</td><td><span class="badge-done">สมบูรณ์</span></td><td>cash record, slip submit, approve, reject, <strong>receipt endpoint</strong></td></tr>
+        <tr><td>Commissions</td><td><span class="badge-done">สมบูรณ์</span></td><td>คำนวณจากยอดเก็บจริง (ADR-0002)</td></tr>
+        <tr><td>Jobs (Late Fee + Notification)</td><td><span class="badge-draft">ร่างแล้ว</span></td><td>Processor มีอยู่ แต่ logic ยังไม่สมบูรณ์</td></tr>
+      </table>
+
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;margin-top:28px">การคำนวณ Commission (ADR-0002)</h3>
+      <div class="callout">
+        Commission คำนวณเมื่อ Payment ถูก approve เท่านั้น (ไม่ใช่วันสร้างสัญญา)<br>
+        <strong>Sale</strong>: <code>payment.amount × sale.commissionRate</code><br>
+        <strong>Sale Lead</strong>: <code>payment.amount × saleLead.overrideCommissionRate</code> (คำนวณจาก Sale ทุกคนในทีม)<br>
+        Rate แยกระหว่าง <code>installmentRate</code> และ <code>cashRate</code> ตาม <code>paymentType</code>
+      </div>
+
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;margin-top:28px">Schedule ที่ระบบสร้างอัตโนมัติ</h3>
+      <pre><code>DAILY:   30 งวด × dailyPrice   + downPayment
+WEEKLY:  12 งวด × weeklyPrice  + downPayment
+MONTHLY: 12 งวด × monthlyPrice + downPayment
+CASH:     1 งวด × cashPrice    (ไม่มี downPayment แยก)</code></pre>
+    </section>
+
+    <!-- Schema -->
+    <section id="schema">
+      <h2><span class="icon">🗄️</span> Database Schema</h2>
+      <table>
+        <tr><th>Table / Field</th><th>หมายเหตุ</th></tr>
+        <tr><td>ทุก table</td><td>มี <code>tenantId</code> ยกเว้น <code>PlatformAdmin</code> และ <code>SubscriptionPlan</code></td></tr>
+        <tr><td><code>Contract.status</code></td><td><code>PENDING_DOWN_PAYMENT → ACTIVE → COMPLETED / CANCELLED / DEFAULTED</code></td></tr>
+        <tr><td><code>Payment.status</code></td><td><code>PENDING → APPROVED / REJECTED</code></td></tr>
+        <tr><td><code>Payment.method</code></td><td><code>CASH / TRANSFER_SLIP</code></td></tr>
+        <tr><td><code>Payment.receiptNumber</code></td><td>nullable — สร้างอัตโนมัติเมื่อ approve รูปแบบ <code>REC-YYYYMMDD-00001</code> (unique ต่อ Tenant)</td></tr>
+        <tr><td><code>Commission</code></td><td>link ไปยัง <code>Payment</code> และ <code>User</code> — ไม่ได้ link กับ Contract โดยตรง</td></tr>
+      </table>
+    </section>
+
+    <!-- Testing -->
+    <section id="testing">
+      <h2><span class="icon">🧪</span> Testing Plan</h2>
+
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px">Unit Tests</h3>
+      <table>
+        <tr><th>Module</th><th>สิ่งที่ทดสอบ</th></tr>
+        <tr><td><code>ContractsService.buildSchedule</code></td><td>ตารางชำระถูกต้องสำหรับ DAILY/WEEKLY/MONTHLY/CASH</td></tr>
+        <tr><td><code>CommissionsService.calculateAndInsert</code></td><td>commission ของ Sale และ Sale Lead ถูกต้องตาม rate</td></tr>
+        <tr><td><code>PaymentsService.recordCash</code></td><td>approve → stock ลด → commission สร้าง → contract เป็น ACTIVE</td></tr>
+        <tr><td><code>PaymentsService.approve</code> (slip)</td><td>approve → ถ้างวดสุดท้าย contract เป็น COMPLETED</td></tr>
+        <tr><td><code>CustomersService.validateCanContract</code></td><td>ปฏิเสธถ้า suspend หรือเกิน contract limit</td></tr>
+        <tr><td><code>StockService</code></td><td>ลดเมื่อ approve down payment, คืนเมื่อ cancel</td></tr>
+      </table>
+
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;margin-top:24px">Integration Tests (API Endpoints)</h3>
+      <table>
+        <tr><th>Scenario</th><th>สิ่งที่ตรวจ</th></tr>
+        <tr><td><code>POST /auth/login</code></td><td>ได้ JWT token กลับมา</td></tr>
+        <tr><td><code>POST /contracts</code> (no stock)</td><td>400 Bad Request</td></tr>
+        <tr><td><code>POST /contracts</code> (customer suspended)</td><td>400 Bad Request</td></tr>
+        <tr><td><code>POST /payments/cash → GET /contracts/:id</code></td><td>status เปลี่ยนเป็น ACTIVE หลัง approve down payment</td></tr>
+        <tr><td>Approve payment งวดสุดท้าย</td><td>contract status เป็น COMPLETED</td></tr>
+        <tr><td>Tenant ที่ subscription หมดอายุ</td><td>403 Forbidden ทุก endpoint</td></tr>
+      </table>
+
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:10px;margin-top:24px">E2E Tests (Playwright)</h3>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <div class="story role-sale"><div class="num">1</div><div class="body">Login → สร้าง Product → สร้าง Contract → <strong>พิมพ์สัญญา</strong> → บันทึกเงินสด → <strong>ออกใบเสร็จ</strong> → ตรวจ Commission</div></div>
+        <div class="story role-sale"><div class="num">2</div><div class="body">Login → ส่ง slip → approve slip → ตรวจ stock ลด</div></div>
+        <div class="story role-platform"><div class="num">3</div><div class="body">Platform Admin: สร้าง Tenant → extend subscription → login เป็น Tenant</div></div>
+      </div>
+    </section>
+
+    <!-- Out of Scope -->
+    <section id="oos">
+      <h2><span class="icon">🚫</span> Out of Scope (v1)</h2>
+      <div class="oos-grid">
+        <div class="oos-item"><strong>Payment Gateway</strong><span>Tenant ชำระ subscription ผ่านโอนเงิน ไม่ใช่ Stripe/Omise</span></div>
+        <div class="oos-item"><strong>Refund</strong><span>การยกเลิกสัญญาไม่มีการคืนเงินในระยะแรก</span></div>
+        <div class="oos-item"><strong>Auto Trial Expiry</strong><span>Trial ไม่มี auto-expire — Platform Admin extend ด้วยตัวเอง</span></div>
+        <div class="oos-item"><strong>Mobile App</strong><span>Customer channel ใช้ LINE LIFF เท่านั้น ไม่มี native app</span></div>
+        <div class="oos-item"><strong>Multi-currency</strong><span>รองรับเฉพาะ THB</span></div>
+        <div class="oos-item"><strong>Export/Import</strong><span>ไม่มี Excel export ใน v1</span></div>
+        <div class="oos-item"><strong>Advanced Reporting</strong><span>BI dashboard และ custom report อยู่นอกขอบเขต v1</span></div>
+      </div>
+    </section>
+
+    <!-- ADR -->
+    <section id="adr">
+      <h2><span class="icon">📐</span> Architecture Decision Records</h2>
+      <div class="adr-list">
+        <div class="adr">
+          <span class="adr-num">ADR-0001</span>
+          <div class="adr-body">
+            <p><strong>Vue + NestJS + PostgreSQL</strong></p>
+            <p class="rationale">เลือกเพราะ team มีประสบการณ์ NestJS และ PostgreSQL รองรับ complex report query</p>
+          </div>
+        </div>
+        <div class="adr">
+          <span class="adr-num">ADR-0002</span>
+          <div class="adr-body">
+            <p><strong>Commission คำนวณจากยอดเก็บจริง ไม่ใช่ยอดขาย</strong></p>
+            <p class="rationale">ทำให้ Sale มี incentive ติดตามหนี้ แทนที่จะได้ commission ทันทีที่สร้างสัญญา</p>
+          </div>
+        </div>
+        <div class="adr">
+          <span class="adr-num">ADR-0003</span>
+          <div class="adr-body">
+            <p><strong>Row-level multi-tenancy ด้วย tenant_id</strong></p>
+            <p class="rationale">ง่ายกว่า schema-per-tenant และ Prisma support ดีกว่า NestJS inject tenantId อัตโนมัติทุก query</p>
+          </div>
+        </div>
+        <div class="adr">
+          <span class="adr-num">ADR-0004</span>
+          <div class="adr-body">
+            <p><strong>Manual subscription payment</strong></p>
+            <p class="rationale">คุ้มกว่า payment gateway สำหรับจำนวน Tenant น้อย — Platform Admin extend หลัง Tenant โอนเงิน</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding:14px 18px;background:var(--bg);border-radius:8px;font-size:13px;color:var(--muted)">
+        <strong style="color:var(--text)">Stock timing note:</strong> Stock ลดตอน approve <strong>เงินดาวน์</strong> (ไม่ใช่ตอนสร้างสัญญา) เพราะสินค้าออกจากร้านเมื่อลูกค้าชำระเงินดาวน์แล้วเท่านั้น<br>
+        <strong style="color:var(--text)">Defaulted threshold:</strong> กำหนดใน <code>tenant.defaultThreshold</code> เป็นจำนวนวันค้างชำระ — Admin ปรับได้ต่อ Tenant
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // Active nav highlight on scroll
+  const sections = document.querySelectorAll('section[id], div[id]');
+  const navLinks = document.querySelectorAll('nav a[href^="#"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
