@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import {
   TrendingUp,
   Wallet,
@@ -18,6 +19,7 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import { formatThb } from '@/lib/utils'
+import { fetchDashboardKpi, type DashboardKpi } from '@/lib/dashboard-api'
 
 interface Kpi {
   label: string
@@ -26,13 +28,25 @@ interface Kpi {
   icon: LucideIcon
 }
 
-// Mock figures — wired to the dashboard KPI API in a later slice.
-const kpis: Kpi[] = [
-  { label: 'ยอดขายรวมเดือนนี้', value: formatThb(842500), hint: '+12% จากเดือนก่อน', icon: TrendingUp },
-  { label: 'commission รวม', value: formatThb(58975), hint: 'จากยอดเก็บจริง', icon: Wallet },
-  { label: 'สัญญาค้างชำระ', value: '17', hint: '3 รายผิดนัด', icon: AlertTriangle },
-  { label: 'สต็อกคงเหลือ', value: '264', hint: 'ทุกสาขา', icon: Boxes },
-]
+const kpiData = ref<DashboardKpi | null>(null)
+
+const kpis = computed<Kpi[]>(() => {
+  const d = kpiData.value
+  return [
+    { label: 'ยอดเก็บรวม (อนุมัติแล้ว)', value: d ? formatThb(d.totalCollected) : '—', hint: 'จากการชำระที่อนุมัติ', icon: TrendingUp },
+    { label: 'commission รวม', value: d ? formatThb(d.totalCommission) : '—', hint: 'จากยอดเก็บจริง', icon: Wallet },
+    { label: 'สัญญาค้างชำระ', value: d ? String(d.overdueContracts) : '—', hint: 'มีงวดเกินกำหนด', icon: AlertTriangle },
+    { label: 'สต็อกคงเหลือ', value: d ? String(d.totalStock) : '—', hint: 'ทุกสาขา', icon: Boxes },
+  ]
+})
+
+onMounted(async () => {
+  try {
+    kpiData.value = await fetchDashboardKpi()
+  } catch {
+    // KPI cards fall back to "—" on error; arrears table below is illustrative.
+  }
+})
 
 interface ArrearRow {
   customer: string

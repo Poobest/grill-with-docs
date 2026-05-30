@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { Plus, FileText } from '@lucide/vue';
 import PageHeader from '@/components/layout/PageHeader.vue';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import {
   type ContractListItem,
 } from '@/lib/contracts-api';
 
+const router = useRouter();
 const contracts = ref<ContractListItem[]>([]);
 const loading = ref(true);
 const error = ref('');
@@ -60,7 +62,7 @@ onMounted(load);
 <template>
   <PageHeader title="สัญญาผ่อน" subtitle="สัญญาทั้งหมดในร้าน">
     <template #actions>
-      <Button>
+      <Button @click="router.push('/contracts/new')">
         <Plus />
         สร้างสัญญา
       </Button>
