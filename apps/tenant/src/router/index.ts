@@ -4,6 +4,11 @@ import ContractsView from '@/views/ContractsView.vue';
 import CreateContractView from '@/views/CreateContractView.vue';
 import ContractDetailView from '@/views/ContractDetailView.vue';
 import CollectTodayView from '@/views/CollectTodayView.vue';
+import CustomersView from '@/views/CustomersView.vue';
+import ProductsView from '@/views/ProductsView.vue';
+import BranchesView from '@/views/BranchesView.vue';
+import UsersView from '@/views/UsersView.vue';
+import StockView from '@/views/StockView.vue';
 import PlaceholderView from '@/views/PlaceholderView.vue';
 import LoginView from '@/views/LoginView.vue';
 import { useAuthStore } from '@/stores/auth';
@@ -17,13 +22,13 @@ const router = createRouter({
     { path: '/contracts/new', name: 'contracts-new', component: CreateContractView },
     { path: '/contracts/:id', name: 'contract-detail', component: ContractDetailView },
     // Placeholder routes keep sidebar nav functional until each slice ships.
-    { path: '/customers', component: PlaceholderView, meta: { title: 'ลูกค้า' } },
+    { path: '/customers', name: 'customers', component: CustomersView },
     { path: '/collect-today', name: 'collect-today', component: CollectTodayView },
     { path: '/payments', component: PlaceholderView, meta: { title: 'การชำระเงิน' } },
-    { path: '/products', component: PlaceholderView, meta: { title: 'สินค้า' } },
-    { path: '/stock', component: PlaceholderView, meta: { title: 'สต็อก' } },
-    { path: '/branches', component: PlaceholderView, meta: { title: 'สาขา' } },
-    { path: '/users', component: PlaceholderView, meta: { title: 'พนักงาน' } },
+    { path: '/products', name: 'products', component: ProductsView },
+    { path: '/stock', name: 'stock', component: StockView },
+    { path: '/branches', name: 'branches', component: BranchesView },
+    { path: '/users', name: 'users', component: UsersView },
   ],
 });
 
