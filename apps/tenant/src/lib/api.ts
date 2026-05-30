@@ -29,6 +29,18 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
+    // A 401 on a request we DID authenticate means the token is stale/expired
+    // (e.g. issued before a DB reset). Clear the session and bounce to /login.
+    // Skip when no token was sent (e.g. the login request itself) so the
+    // caller can surface "wrong email or password".
+    if (response.status === 401 && token) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
+        window.location.assign('/login');
+      }
+    }
+
     let message = `เกิดข้อผิดพลาด (${response.status})`;
     try {
       const body = (await response.json()) as { message?: string | string[] };
