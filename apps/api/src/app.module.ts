@@ -10,6 +10,9 @@ import { PaymentsModule } from './tenant/payments/payments.module';
 import { ProductsModule } from './tenant/products/products.module';
 import { CustomersModule } from './tenant/customers/customers.module';
 import { DashboardModule } from './tenant/dashboard/dashboard.module';
+import { BranchesModule } from './tenant/branches/branches.module';
+import { UsersModule } from './tenant/users/users.module';
+import { StockModule } from './tenant/stock/stock.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { DashboardModule } from './tenant/dashboard/dashboard.module';
     ProductsModule,
     CustomersModule,
     DashboardModule,
+    BranchesModule,
+    UsersModule,
+    StockModule,
   ],
   controllers: [AppController],
   providers: [

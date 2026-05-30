@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CustomerListItem {
@@ -26,6 +26,55 @@ export interface EligibilityResult {
 @Injectable()
 export class CustomersService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private toItem(c: {
+    id: string;
+    name: string;
+    phone: string;
+    isSuspended: boolean;
+    contractLimit: number;
+  }): CustomerListItem {
+    return {
+      id: c.id,
+      name: c.name,
+      phone: c.phone,
+      isSuspended: c.isSuspended,
+      contractLimit: c.contractLimit,
+    };
+  }
+
+  /** Creates a customer for a tenant. */
+  async create(
+    tenantId: string,
+    data: { name: string; phone: string; contractLimit?: number },
+  ): Promise<CustomerListItem> {
+    const customer = await this.prisma.customer.create({
+      data: {
+        tenantId,
+        name: data.name,
+        phone: data.phone,
+        contractLimit: data.contractLimit ?? 1,
+      },
+    });
+    return this.toItem(customer);
+  }
+
+  /** Suspends or un-suspends a customer (scoped to the tenant). */
+  async setSuspended(
+    tenantId: string,
+    customerId: string,
+    isSuspended: boolean,
+  ): Promise<CustomerListItem> {
+    const existing = await this.prisma.customer.findFirst({
+      where: { id: customerId, tenantId },
+    });
+    if (!existing) throw new NotFoundException('ไม่พบลูกค้า');
+    const customer = await this.prisma.customer.update({
+      where: { id: customerId },
+      data: { isSuspended },
+    });
+    return this.toItem(customer);
+  }
 
   /** Lists a tenant's customers for selection in the create-contract flow. */
   async list(tenantId: string): Promise<CustomerListItem[]> {

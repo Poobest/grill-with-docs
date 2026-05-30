@@ -15,6 +15,25 @@ export interface ProductListItem {
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Creates a product for a tenant. */
+  async create(
+    tenantId: string,
+    data: Omit<ProductListItem, 'id'> & { description?: string },
+  ): Promise<ProductListItem> {
+    const product = await this.prisma.product.create({
+      data: { tenantId, ...data },
+    });
+    return {
+      id: product.id,
+      name: product.name,
+      cashPrice: Number(product.cashPrice),
+      downPayment: Number(product.downPayment),
+      dailyPrice: Number(product.dailyPrice),
+      weeklyPrice: Number(product.weeklyPrice),
+      monthlyPrice: Number(product.monthlyPrice),
+    };
+  }
+
   /** Active products for a tenant, with all price fields as numbers. */
   async list(tenantId: string): Promise<ProductListItem[]> {
     const products = await this.prisma.product.findMany({
