@@ -1,36 +1,37 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import LoginPage from '../pages/LoginPage.vue'
-import DashboardPage from '../pages/DashboardPage.vue'
-import BranchesPage from '../pages/BranchesPage.vue'
-import UsersPage from '../pages/UsersPage.vue'
-import ProductsPage from '../pages/ProductsPage.vue'
-import StockPage from '../pages/StockPage.vue'
-import CustomersPage from '../pages/CustomersPage.vue'
-import ContractsPage from '../pages/ContractsPage.vue'
-import PaymentsPage from '../pages/PaymentsPage.vue'
-import CommissionsPage from '../pages/CommissionsPage.vue'
+import { createRouter, createWebHistory } from 'vue-router';
+import DashboardView from '@/views/DashboardView.vue';
+import ContractsView from '@/views/ContractsView.vue';
+import PlaceholderView from '@/views/PlaceholderView.vue';
+import LoginView from '@/views/LoginView.vue';
+import { useAuthStore } from '@/stores/auth';
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/login', component: LoginPage },
-    { path: '/', redirect: '/dashboard' },
-    { path: '/dashboard', component: DashboardPage, meta: { requiresAuth: true } },
-    { path: '/branches', component: BranchesPage, meta: { requiresAuth: true } },
-    { path: '/users', component: UsersPage, meta: { requiresAuth: true } },
-    { path: '/products', component: ProductsPage, meta: { requiresAuth: true } },
-    { path: '/stock', component: StockPage, meta: { requiresAuth: true } },
-    { path: '/customers', component: CustomersPage, meta: { requiresAuth: true } },
-    { path: '/contracts', component: ContractsPage, meta: { requiresAuth: true } },
-    { path: '/payments', component: PaymentsPage, meta: { requiresAuth: true } },
-    { path: '/commissions', component: CommissionsPage, meta: { requiresAuth: true } },
+    { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
+    { path: '/', name: 'dashboard', component: DashboardView },
+    { path: '/contracts', name: 'contracts', component: ContractsView },
+    // Placeholder routes keep sidebar nav functional until each slice ships.
+    { path: '/customers', component: PlaceholderView, meta: { title: 'ลูกค้า' } },
+    { path: '/collect-today', component: PlaceholderView, meta: { title: 'เก็บเงินวันนี้' } },
+    { path: '/payments', component: PlaceholderView, meta: { title: 'การชำระเงิน' } },
+    { path: '/products', component: PlaceholderView, meta: { title: 'สินค้า' } },
+    { path: '/stock', component: PlaceholderView, meta: { title: 'สต็อก' } },
+    { path: '/branches', component: PlaceholderView, meta: { title: 'สาขา' } },
+    { path: '/users', component: PlaceholderView, meta: { title: 'พนักงาน' } },
   ],
-})
+});
 
+// Auth gate: every route except /login requires a valid session.
 router.beforeEach((to) => {
-  const token = localStorage.getItem('tenant_token')
-  if (to.meta.requiresAuth && !token) return '/login'
-  if (to.path === '/login' && token) return '/dashboard'
-})
+  const auth = useAuthStore();
+  if (!to.meta.public && !auth.isAuthenticated) {
+    return { name: 'login' };
+  }
+  if (to.name === 'login' && auth.isAuthenticated) {
+    return { name: 'dashboard' };
+  }
+  return true;
+});
 
-export default router
+export default router;
